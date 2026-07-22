@@ -79,16 +79,52 @@ const elementos = {
     historicoVazio: document.getElementById('historicoVazio'),
     historicoLancamentos: document.getElementById('historicoLancamentos'),
 
-    caixinhasGrid: document.getElementById('caixinhasGrid'),
-    caixinhaSelect: document.getElementById('caixinhaSelect'),
+   caixinhasGrid: document.getElementById('caixinhasGrid'),
+caixinhaSelect: document.getElementById('caixinhaSelect'),
+btnNovaCaixinha: document.getElementById('btnNovaCaixinha'),
+
+modalCaixinha: document.getElementById('modalCaixinha'),
+tituloModalCaixinha: document.getElementById(
+    'tituloModalCaixinha'
+),
+caixinhaEmEdicaoId: document.getElementById(
+    'caixinhaEmEdicaoId'
+),
+nomeCaixinha: document.getElementById('nomeCaixinha'),
+metaCaixinha: document.getElementById('metaCaixinha'),
+iconeCaixinha: document.getElementById('iconeCaixinha'),
+corCaixinha: document.getElementById('corCaixinha'),
+prazoCaixinha: document.getElementById('prazoCaixinha'),
+btnSalvarCaixinha: document.getElementById(
+    'btnSalvarCaixinha'
+),
+btnCancelarCaixinha: document.getElementById(
+    'btnCancelarCaixinha'
+),
+btnFecharModalCaixinha: document.getElementById(
+    'btnFecharModalCaixinha'
+),
+
+modalExcluirCaixinha: document.getElementById(
+    'modalExcluirCaixinha'
+),
+textoExcluirCaixinha: document.getElementById(
+    'textoExcluirCaixinha'
+),
+btnCancelarExclusaoCaixinha: document.getElementById(
+    'btnCancelarExclusaoCaixinha'
+),
+btnConfirmarExclusaoCaixinha: document.getElementById(
+    'btnConfirmarExclusaoCaixinha'
+),
 
     painelSalario: document.getElementById('painelSalario'),
     painelGuardado: document.getElementById('painelGuardado'),
     painelFixo: document.getElementById('painelFixo'),
     painelVariavel: document.getElementById('painelVariavel'),
 
-    modalOverlay: document.querySelector('.modal-overlay'),
-    sobraFlutuante: document.querySelector('.sobra-flutuante')
+   modalOverlay: document.getElementById('modalLancamento'),
+sobraFlutuante: document.querySelector('.sobra-flutuante')
 };
 
 const estadoHistorico = {
@@ -96,7 +132,59 @@ const estadoHistorico = {
     pesquisa: '',
     mes: 'todos',
     ordenacao: 'recentes'
+};const ICONES_CAIXINHA = {
+    'piggy-bank': 'fa-piggy-bank',
+    'shield-heart': 'fa-shield-heart',
+    'rings-wedding': 'fa-ring',
+    'plane': 'fa-plane',
+    'house': 'fa-house',
+    'car': 'fa-car',
+    'graduation-cap': 'fa-graduation-cap',
+    'laptop': 'fa-laptop',
+    'gift': 'fa-gift',
+    'bullseye': 'fa-bullseye'
 };
+
+const CORES_CAIXINHA = {
+    dourado: '#d9ad26',
+    azul: '#4f97ff',
+    verde: '#31cc70',
+    roxo: '#9b7cff',
+    laranja: '#ffad19',
+    vermelho: '#ff5b5b'
+};
+
+let caixinhaPendenteExclusaoId = null;
+
+function obterIconeCaixinha(icone) {
+    return ICONES_CAIXINHA[icone]
+        || ICONES_CAIXINHA['piggy-bank'];
+}
+
+function obterCorCaixinha(cor) {
+    return CORES_CAIXINHA[cor]
+        || CORES_CAIXINHA.dourado;
+}
+
+function formatarPrazoCaixinha(prazo) {
+    if (!prazo) {
+        return '';
+    }
+
+    const partes = prazo.split('-');
+
+    if (partes.length !== 3) {
+        return '';
+    }
+
+    const [ano, mes, dia] = partes;
+
+    return `${dia}/${mes}/${ano}`;
+}
+
+function gerarIdUnico() {
+    return Date.now() + Math.floor(Math.random() * 1000);
+}
 
     // ==========================================
     // 2. RENDERIZADOR PRINCIPAL (A MÁGICA)
@@ -370,83 +458,194 @@ const estadoHistorico = {
         elementos.painelFixo.innerText = `R$ ${formatarMoeda(estado.totalFixo)}`;
         elementos.painelVariavel.innerText = `R$ ${formatarMoeda(estado.totalVariavel)}`;
 
-        if (elementos.caixinhasGrid) {
-            elementos.caixinhasGrid.innerHTML = '';
+  if (elementos.caixinhasGrid) {
+    elementos.caixinhasGrid.innerHTML = '';
 
-            caixinhas.forEach(caixinha => {
-    const saldoCaixinha = saldosCaixinhas[caixinha.id] || 0;
-    const metaCaixinha = Number(caixinha.meta) || 0;
+    let atualizouAvisoMeta = false;
 
-    const possuiMeta = metaCaixinha > 0;
+    caixinhas.forEach(caixinha => {
+        const saldoCaixinha =
+            saldosCaixinhas[caixinha.id] || 0;
 
-    const porcentagemReal = possuiMeta
-        ? (saldoCaixinha / metaCaixinha) * 100
-        : 0;
+        const metaCaixinha =
+            Number(caixinha.meta) || 0;
 
-    const porcentagemExibida = Math.max(
-        0,
-        Math.round(porcentagemReal)
-    );
+        const possuiMeta = metaCaixinha > 0;
 
-    const larguraProgresso = Math.min(
-        porcentagemExibida,
-        100
-    );
+        const porcentagemReal = possuiMeta
+            ? (saldoCaixinha / metaCaixinha) * 100
+            : 0;
 
-    const textoMeta = possuiMeta
-        ? `Meta: R$ ${formatarMoeda(metaCaixinha)}`
-        : 'Meta não definida';
+        const porcentagemExibida = Math.max(
+            0,
+            Math.round(porcentagemReal)
+        );
 
-    const textoPorcentagem = possuiMeta
-        ? `${porcentagemExibida}%`
-        : '0%';
+        const larguraProgresso = Math.min(
+            porcentagemExibida,
+            100
+        );
 
-    elementos.caixinhasGrid.innerHTML += `
-        <div class="caixinha-card">
-            <h3>
-                ${escaparHTML(caixinha.nome)}
+        const metaAtingida =
+            possuiMeta &&
+            saldoCaixinha >= metaCaixinha;
 
-                <span
-                    class="btn-excluir-caixinha"
-                    onclick="excluirCaixinha(${caixinha.id})"
-                    title="Excluir caixinha"
-                >
-                    ❌
-                </span>
-            </h3>
+        if (
+            metaAtingida &&
+            !caixinha.metaAtingidaAvisada
+        ) {
+            caixinha.metaAtingidaAvisada = true;
+            atualizouAvisoMeta = true;
 
-            <div class="caixinha-valores">
-                <div class="saldo">
-                    R$ ${formatarMoeda(saldoCaixinha)}
-                </div>
-
-                <div class="caixinha-meta">
-                    ${textoMeta}
-                </div>
-            </div>
-
-            <div class="caixinha-progresso-info">
-                <span>Progresso</span>
-                <strong>${textoPorcentagem}</strong>
-            </div>
-
-            <div
-                class="caixinha-progresso"
-                role="progressbar"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                aria-valuenow="${larguraProgresso}"
-                aria-label="Progresso da caixinha ${escaparHTML(caixinha.nome)}"
-            >
-                <div
-                    class="caixinha-progresso-preenchimento"
-                    style="width: ${larguraProgresso}%"
-                ></div>
-            </div>
-        </div>
-    `;
-});
+            setTimeout(() => {
+                mostrarToast(
+                    `Meta da caixinha "${caixinha.nome}" atingida!`,
+                    'sucesso'
+                );
+            }, 0);
         }
+
+        if (
+            !metaAtingida &&
+            caixinha.metaAtingidaAvisada
+        ) {
+            caixinha.metaAtingidaAvisada = false;
+            atualizouAvisoMeta = true;
+        }
+
+        const textoMeta = possuiMeta
+            ? `R$ ${formatarMoeda(metaCaixinha)}`
+            : 'Não definida';
+
+        const textoPorcentagem = possuiMeta
+            ? `${porcentagemExibida}%`
+            : '0%';
+
+        const icone = obterIconeCaixinha(
+            caixinha.icone
+        );
+
+        const cor = obterCorCaixinha(
+            caixinha.cor
+        );
+
+        const prazoFormatado = formatarPrazoCaixinha(
+            caixinha.prazo
+        );
+
+        const prazoHTML = prazoFormatado
+            ? `
+                <span class="caixinha-prazo">
+                    <i class="fa-regular fa-calendar"></i>
+                    Até ${prazoFormatado}
+                </span>
+            `
+            : '';
+
+        const metaAtingidaHTML = metaAtingida
+            ? `
+                <span class="caixinha-concluida">
+                    <i class="fa-solid fa-check"></i>
+                    Meta atingida
+                </span>
+            `
+            : '';
+
+        elementos.caixinhasGrid.insertAdjacentHTML(
+            'beforeend',
+            `
+                <article
+                    class="caixinha-card"
+                    style="--caixinha-cor: ${cor};"
+                >
+                    <div class="caixinha-card-header">
+                        <div class="caixinha-identidade">
+                            <span class="caixinha-icone">
+                                <i class="fa-solid ${icone}"></i>
+                            </span>
+
+                            <div class="caixinha-titulo-area">
+                                <h3>
+                                    ${escaparHTML(caixinha.nome)}
+                                </h3>
+
+                                ${prazoHTML}
+                            </div>
+                        </div>
+
+                        <div class="caixinha-acoes">
+                            <button
+                                class="btn-acao-caixinha"
+                                type="button"
+                                data-acao="editar"
+                                data-caixinha-id="${caixinha.id}"
+                                title="Editar caixinha"
+                                aria-label="Editar ${escaparHTML(caixinha.nome)}"
+                            >
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+
+                            <button
+                                class="btn-acao-caixinha btn-acao-excluir"
+                                type="button"
+                                data-acao="excluir"
+                                data-caixinha-id="${caixinha.id}"
+                                title="Excluir caixinha"
+                                aria-label="Excluir ${escaparHTML(caixinha.nome)}"
+                            >
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    ${metaAtingidaHTML}
+
+                    <div class="caixinha-valores">
+                        <div>
+                            <span class="caixinha-valor-label">
+                                Saldo atual
+                            </span>
+
+                            <strong class="saldo">
+                                R$ ${formatarMoeda(saldoCaixinha)}
+                            </strong>
+                        </div>
+
+                        <div class="caixinha-meta-valor">
+                            <span>Meta</span>
+                            <strong>${textoMeta}</strong>
+                        </div>
+                    </div>
+
+                    <div class="caixinha-progresso-area">
+                        <div class="caixinha-progresso-info">
+                            <span>Progresso</span>
+                            <strong>${textoPorcentagem}</strong>
+                        </div>
+
+                        <div
+                            class="caixinha-progresso"
+                            role="progressbar"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow="${larguraProgresso}"
+                            aria-label="Progresso da caixinha ${escaparHTML(caixinha.nome)}"
+                        >
+                            <div
+                                class="caixinha-progresso-preenchimento"
+                                style="width: ${larguraProgresso}%"
+                            ></div>
+                        </div>
+                    </div>
+                </article>
+            `
+        );
+    });
+
+    if (atualizouAvisoMeta) {
+        salvarNoBanco();
+    }
+}
 
         if (elementos.caixinhaSelect) {
             elementos.caixinhaSelect.innerHTML = '';
@@ -555,60 +754,421 @@ function mostrarToast(mensagem, tipo = 'sucesso') {
     });
 }
     // ==========================================
-    // 3. CRIAR E EXCLUIR CAIXINHAS
-    // ==========================================
-  document.getElementById('btnNovaCaixinha').addEventListener('click', () => {
-    const nome = prompt('Qual o nome do novo objetivo/caixinha?');
+// 3. GERENCIAMENTO DAS CAIXINHAS
+// ==========================================
+function limparFormularioCaixinha() {
+    elementos.caixinhaEmEdicaoId.value = '';
+    elementos.nomeCaixinha.value = '';
+    elementos.metaCaixinha.value = '';
+    elementos.iconeCaixinha.value = 'piggy-bank';
+    elementos.corCaixinha.value = 'dourado';
+    elementos.prazoCaixinha.value = '';
+}
 
-    if (!nome || nome.trim() === '') {
+function abrirModalCaixinha(caixinha = null) {
+    limparFormularioCaixinha();
+
+    if (caixinha) {
+        elementos.caixinhaEmEdicaoId.value =
+            String(caixinha.id);
+
+        elementos.nomeCaixinha.value =
+            caixinha.nome || '';
+
+        elementos.metaCaixinha.value =
+            Number(caixinha.meta) || '';
+
+        elementos.iconeCaixinha.value =
+            caixinha.icone || 'piggy-bank';
+
+        elementos.corCaixinha.value =
+            caixinha.cor || 'dourado';
+
+        elementos.prazoCaixinha.value =
+            caixinha.prazo || '';
+
+        elementos.tituloModalCaixinha.textContent =
+            'Editar caixinha';
+
+        elementos.btnSalvarCaixinha.textContent =
+            'Salvar alterações';
+    } else {
+        elementos.tituloModalCaixinha.textContent =
+            'Criar nova caixinha';
+
+        elementos.btnSalvarCaixinha.textContent =
+            'Criar caixinha';
+    }
+
+    elementos.modalCaixinha.style.display = 'flex';
+    elementos.modalCaixinha.setAttribute(
+        'aria-hidden',
+        'false'
+    );
+
+    setTimeout(() => {
+        elementos.nomeCaixinha.focus();
+    }, 50);
+}
+
+function fecharModalCaixinha() {
+    elementos.modalCaixinha.style.display = 'none';
+    elementos.modalCaixinha.setAttribute(
+        'aria-hidden',
+        'true'
+    );
+
+    limparFormularioCaixinha();
+}
+
+function salvarCaixinha() {
+    const nome =
+        elementos.nomeCaixinha.value.trim();
+
+    const meta =
+        Number(elementos.metaCaixinha.value);
+
+    const icone =
+        elementos.iconeCaixinha.value;
+
+    const cor =
+        elementos.corCaixinha.value;
+
+    const prazo =
+        elementos.prazoCaixinha.value;
+
+    const idEmEdicao =
+        Number(elementos.caixinhaEmEdicaoId.value);
+
+    if (!nome) {
+        mostrarToast(
+            'Informe o nome da caixinha.',
+            'aviso'
+        );
+
+        elementos.nomeCaixinha.focus();
         return;
     }
 
-    const metaInformada = prompt('Qual o valor da meta?');
-    const meta = Number(
-        String(metaInformada || '')
-            .replace(/\./g, '')
-            .replace(',', '.')
-    );
+    if (nome.length > 40) {
+        mostrarToast(
+            'O nome deve ter no máximo 40 caracteres.',
+            'aviso'
+        );
+
+        elementos.nomeCaixinha.focus();
+        return;
+    }
 
     if (!Number.isFinite(meta) || meta <= 0) {
         mostrarToast(
             'Informe uma meta maior que zero.',
+            'aviso'
+        );
+
+        elementos.metaCaixinha.focus();
+        return;
+    }
+
+    if (!ICONES_CAIXINHA[icone]) {
+        mostrarToast(
+            'Selecione um ícone válido.',
             'erro'
         );
 
         return;
     }
 
+    if (!CORES_CAIXINHA[cor]) {
+        mostrarToast(
+            'Selecione uma cor válida.',
+            'erro'
+        );
+
+        return;
+    }
+
+    if (idEmEdicao) {
+        const caixinha = caixinhas.find(
+            item => Number(item.id) === idEmEdicao
+        );
+
+        if (!caixinha) {
+            mostrarToast(
+                'Não foi possível localizar a caixinha.',
+                'erro'
+            );
+
+            fecharModalCaixinha();
+            return;
+        }
+
+        const metaAnterior =
+            Number(caixinha.meta) || 0;
+
+        caixinha.nome = nome;
+        caixinha.meta = meta;
+        caixinha.icone = icone;
+        caixinha.cor = cor;
+        caixinha.prazo = prazo;
+
+        if (metaAnterior !== meta) {
+            caixinha.metaAtingidaAvisada = false;
+        }
+
+        salvarNoBanco();
+        fecharModalCaixinha();
+        renderizarTela();
+
+        mostrarToast(
+            'Caixinha atualizada com sucesso.',
+            'sucesso'
+        );
+
+        return;
+    }
+
     caixinhas.push({
-        id: Date.now(),
-        nome: nome.trim(),
-        meta: meta
+        id: gerarIdUnico(),
+        nome: nome,
+        meta: meta,
+        icone: icone,
+        cor: cor,
+        prazo: prazo,
+        criadaEm: new Date().toISOString(),
+        metaAtingidaAvisada: false
     });
 
     salvarNoBanco();
+    fecharModalCaixinha();
     renderizarTela();
 
     mostrarToast(
         'Caixinha criada com sucesso.',
         'sucesso'
     );
-});
-    window.excluirCaixinha = function(id) {
-        if(confirm("Tem certeza que deseja excluir esta caixinha? (Os lançamentos dela ficarão sem categoria)")) {
-            caixinhas = caixinhas.filter(c => c.id !== id);
-            salvarNoBanco();
-            renderizarTela();
+}
+
+function possuiMovimentacoesNaCaixinha(id) {
+    return transacoes.some(transacao => {
+        return (
+            Number(transacao.caixinhaId) === Number(id) &&
+            (
+                transacao.tipo === 'guardado' ||
+                transacao.tipo === 'resgate'
+            )
+        );
+    });
+}
+
+function solicitarExclusaoCaixinha(id) {
+    const caixinha = caixinhas.find(
+        item => Number(item.id) === Number(id)
+    );
+
+    if (!caixinha) {
+        mostrarToast(
+            'Caixinha não encontrada.',
+            'erro'
+        );
+
+        return;
+    }
+
+    if (possuiMovimentacoesNaCaixinha(id)) {
+        mostrarToast(
+            'Esta caixinha possui movimentações e não pode ser excluída.',
+            'aviso'
+        );
+
+        return;
+    }
+
+    caixinhaPendenteExclusaoId = Number(id);
+
+    elementos.textoExcluirCaixinha.textContent =
+        `A caixinha "${caixinha.nome}" será excluída permanentemente.`;
+
+    elementos.modalExcluirCaixinha.style.display =
+        'flex';
+
+    elementos.modalExcluirCaixinha.setAttribute(
+        'aria-hidden',
+        'false'
+    );
+}
+
+function fecharModalExclusaoCaixinha() {
+    caixinhaPendenteExclusaoId = null;
+
+    elementos.modalExcluirCaixinha.style.display =
+        'none';
+
+    elementos.modalExcluirCaixinha.setAttribute(
+        'aria-hidden',
+        'true'
+    );
+}
+
+function confirmarExclusaoCaixinha() {
+    if (!caixinhaPendenteExclusaoId) {
+        fecharModalExclusaoCaixinha();
+        return;
+    }
+
+    const id = caixinhaPendenteExclusaoId;
+
+    if (possuiMovimentacoesNaCaixinha(id)) {
+        fecharModalExclusaoCaixinha();
+
+        mostrarToast(
+            'A caixinha recebeu uma movimentação e não pode mais ser excluída.',
+            'aviso'
+        );
+
+        return;
+    }
+
+    caixinhas = caixinhas.filter(
+        caixinha => Number(caixinha.id) !== id
+    );
+
+    salvarNoBanco();
+    fecharModalExclusaoCaixinha();
+    renderizarTela();
+
+    mostrarToast(
+        'Caixinha excluída com sucesso.',
+        'sucesso'
+    );
+}
+
+elementos.btnNovaCaixinha.addEventListener(
+    'click',
+    () => abrirModalCaixinha()
+);
+
+elementos.btnSalvarCaixinha.addEventListener(
+    'click',
+    salvarCaixinha
+);
+
+elementos.btnCancelarCaixinha.addEventListener(
+    'click',
+    fecharModalCaixinha
+);
+
+elementos.btnFecharModalCaixinha.addEventListener(
+    'click',
+    fecharModalCaixinha
+);
+
+elementos.btnCancelarExclusaoCaixinha.addEventListener(
+    'click',
+    fecharModalExclusaoCaixinha
+);
+
+elementos.btnConfirmarExclusaoCaixinha.addEventListener(
+    'click',
+    confirmarExclusaoCaixinha
+);
+
+elementos.caixinhasGrid.addEventListener(
+    'click',
+    evento => {
+        const botao = evento.target.closest(
+            '[data-acao][data-caixinha-id]'
+        );
+
+        if (!botao) {
+            return;
+        }
+
+        const id = Number(
+            botao.dataset.caixinhaId
+        );
+
+        const acao = botao.dataset.acao;
+
+        if (acao === 'editar') {
+            const caixinha = caixinhas.find(
+                item => Number(item.id) === id
+            );
+
+            if (!caixinha) {
+                mostrarToast(
+                    'Caixinha não encontrada.',
+                    'erro'
+                );
+
+                return;
+            }
+
+            abrirModalCaixinha(caixinha);
+            return;
+        }
+
+        if (acao === 'excluir') {
+            solicitarExclusaoCaixinha(id);
         }
     }
+);
+
+elementos.modalCaixinha.addEventListener(
+    'click',
+    evento => {
+        if (evento.target === elementos.modalCaixinha) {
+            fecharModalCaixinha();
+        }
+    }
+);
+
+elementos.modalExcluirCaixinha.addEventListener(
+    'click',
+    evento => {
+        if (
+            evento.target ===
+            elementos.modalExcluirCaixinha
+        ) {
+            fecharModalExclusaoCaixinha();
+        }
+    }
+);
+
+document.addEventListener('keydown', evento => {
+    if (evento.key !== 'Escape') {
+        return;
+    }
+
+    if (
+        elementos.modalCaixinha.style.display ===
+        'flex'
+    ) {
+        fecharModalCaixinha();
+    }
+
+    if (
+        elementos.modalExcluirCaixinha.style.display ===
+        'flex'
+    ) {
+        fecharModalExclusaoCaixinha();
+    }
+});
 
     // ==========================================
     // 4. LÓGICA DO MODAL
     // ==========================================
- const modalOverlay = document.querySelector('.modal-overlay');
-const tipoLancamento = document.getElementById('tipoLancamento');
-const areaCaixinha = document.getElementById('areaCaixinha');
+const modalOverlay = document.getElementById(
+    'modalLancamento'
+);
 
+const tipoLancamento = document.getElementById(
+    'tipoLancamento'
+);
+
+const areaCaixinha = document.getElementById(
+    'areaCaixinha'
+);
 const floatingActions = document.getElementById('floatingActions');
 const btnFloatingMenu = document.getElementById('btnFloatingMenu');
 const floatingMenu = document.getElementById('floatingMenu');
@@ -687,9 +1247,17 @@ document.addEventListener('keydown', function(evento) {
         areaCaixinha.style.display = (tipo === 'guardado' || tipo === 'resgate') ? 'block' : 'none';
         
         modalOverlay.style.display = 'flex';
+modalOverlay.setAttribute('aria-hidden', 'false');
     }
 
-    document.querySelector('.btn-cancel').addEventListener('click', () => modalOverlay.style.display = 'none');
+    const btnCancelarLancamento = document.getElementById(
+    'btnCancelarLancamento'
+);
+
+btnCancelarLancamento.addEventListener('click', () => {
+modalOverlay.style.display = 'none';
+modalOverlay.setAttribute('aria-hidden', 'true');
+});
 
     document.querySelector('.btn-salary').addEventListener('click', () => abrirModal('salario', 'Inserir Receita'));
     document.querySelector('.btn-saved').addEventListener('click', () => abrirModal('guardado', 'Guardar Dinheiro'));

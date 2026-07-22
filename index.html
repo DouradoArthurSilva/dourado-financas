@@ -249,8 +249,245 @@
         </section>
 
     </main>
+<!-- MODAL DE CRIAÇÃO E EDIÇÃO DE CAIXINHA -->
+<div
+    class="modal-overlay modal-caixinha-overlay"
+    id="modalCaixinha"
+    aria-hidden="true"
+>
+    <div
+        class="modal-content modal-caixinha-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloModalCaixinha"
+    >
+        <button
+            class="modal-close"
+            id="btnFecharModalCaixinha"
+            type="button"
+            aria-label="Fechar modal"
+        >
+            <i class="fa-solid fa-xmark"></i>
+        </button>
 
-  <div class="modal-overlay">
+        <div class="modal-caixinha-header">
+            <span class="modal-caixinha-icon">
+                <i class="fa-solid fa-piggy-bank"></i>
+            </span>
+
+            <div>
+                <h3 id="tituloModalCaixinha">
+                    Criar nova caixinha
+                </h3>
+
+                <p>
+                    Defina os detalhes do seu objetivo financeiro.
+                </p>
+            </div>
+        </div>
+
+        <input
+            type="hidden"
+            id="caixinhaEmEdicaoId"
+            value=""
+        >
+
+        <div class="form-group">
+            <label for="nomeCaixinha">
+                Nome do objetivo
+            </label>
+
+            <input
+                type="text"
+                id="nomeCaixinha"
+                maxlength="40"
+                placeholder="Ex: Viagem, carro ou emergência"
+                autocomplete="off"
+            >
+
+            <small class="form-helper">
+                Use um nome curto e fácil de identificar.
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label for="metaCaixinha">
+                Valor da meta
+            </label>
+
+            <input
+                type="number"
+                id="metaCaixinha"
+                min="0.01"
+                step="0.01"
+                placeholder="0,00"
+            >
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="iconeCaixinha">
+                    Ícone
+                </label>
+
+                <select id="iconeCaixinha">
+                    <option value="piggy-bank">
+                        Cofrinho
+                    </option>
+
+                    <option value="shield-heart">
+                        Emergência
+                    </option>
+
+                    <option value="rings-wedding">
+                        Casamento
+                    </option>
+
+                    <option value="plane">
+                        Viagem
+                    </option>
+
+                    <option value="house">
+                        Casa
+                    </option>
+
+                    <option value="car">
+                        Carro
+                    </option>
+
+                    <option value="graduation-cap">
+                        Estudos
+                    </option>
+
+                    <option value="laptop">
+                        Tecnologia
+                    </option>
+
+                    <option value="gift">
+                        Presente
+                    </option>
+
+                    <option value="bullseye">
+                        Objetivo
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="corCaixinha">
+                    Cor
+                </label>
+
+                <select id="corCaixinha">
+                    <option value="dourado">
+                        Dourado
+                    </option>
+
+                    <option value="azul">
+                        Azul
+                    </option>
+
+                    <option value="verde">
+                        Verde
+                    </option>
+
+                    <option value="roxo">
+                        Roxo
+                    </option>
+
+                    <option value="laranja">
+                        Laranja
+                    </option>
+
+                    <option value="vermelho">
+                        Vermelho
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="prazoCaixinha">
+                Prazo da meta
+                <span class="label-opcional">
+                    Opcional
+                </span>
+            </label>
+
+            <input
+                type="date"
+                id="prazoCaixinha"
+            >
+        </div>
+
+        <div class="modal-actions">
+            <button
+                class="btn-cancel"
+                id="btnCancelarCaixinha"
+                type="button"
+            >
+                Cancelar
+            </button>
+
+            <button
+                class="btn-save"
+                id="btnSalvarCaixinha"
+                type="button"
+            >
+                Criar caixinha
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
+<div
+    class="modal-overlay modal-confirmacao-overlay"
+    id="modalExcluirCaixinha"
+    aria-hidden="true"
+>
+    <div
+        class="modal-content modal-confirmacao-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloExcluirCaixinha"
+    >
+        <span class="confirmacao-icon confirmacao-icon-perigo">
+            <i class="fa-solid fa-trash-can"></i>
+        </span>
+
+        <h3 id="tituloExcluirCaixinha">
+            Excluir caixinha?
+        </h3>
+
+        <p id="textoExcluirCaixinha">
+            Esta ação não poderá ser desfeita.
+        </p>
+
+        <div class="modal-actions">
+            <button
+                class="btn-cancel"
+                id="btnCancelarExclusaoCaixinha"
+                type="button"
+            >
+                Cancelar
+            </button>
+
+            <button
+                class="btn-danger"
+                id="btnConfirmarExclusaoCaixinha"
+                type="button"
+            >
+                Excluir caixinha
+            </button>
+        </div>
+    </div>
+</div>
+ <div
+    class="modal-overlay"
+    id="modalLancamento"
+    aria-hidden="true"
+>
     <div class="modal-content">
         <h3 id="modalTitle">Adicionar Nova Movimentação</h3>
         
@@ -287,7 +524,13 @@
         </div>
 
         <div class="modal-actions">
-            <button class="btn-cancel">Cancelar</button>
+            <button
+    class="btn-cancel"
+    id="btnCancelarLancamento"
+    type="button"
+>
+    Cancelar
+</button>
             <button class="btn-save">Salvar</button>
         </div>
     </div>
