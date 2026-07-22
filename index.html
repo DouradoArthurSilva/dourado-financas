@@ -32,25 +32,91 @@
 
     <main>
         
-       <section class="management-panel">
-            <div class="action-group group-in">
-                <h4>Entradas & Reservas</h4>
-                <div class="button-grid">
-                    <button class="btn-action outline-blue btn-salary"><i class="fa-solid fa-money-bill-wave"></i> + Nova Receita</button>
-                    <button class="btn-action outline-green btn-saved"><i class="fa-solid fa-piggy-bank"></i> + Guardar Dinheiro</button>
-                </div>
-            </div>
+      <!-- MENU FLUTUANTE DE LANÇAMENTOS -->
+<div class="floating-actions" id="floatingActions">
 
-            <div class="action-group group-out">
-                <h4>Despesas & Utilizações</h4>
-                <div class="button-grid">
-                    <button class="btn-action outline-orange btn-fixed"><i class="fa-solid fa-file-invoice-dollar"></i> - Gasto Fixo</button>
-                    <button class="btn-action outline-red btn-variable"><i class="fa-solid fa-basket-shopping"></i> - Gasto Variável</button>
-                    <button class="btn-action outline-yellow btn-travel"><i class="fa-solid fa-house"></i> - Usar Lazer/Casa</button>
-                    <button class="btn-action outline-purple btn-rescue"><i class="fa-solid fa-unlock-keyhole"></i> - Usar Reserva</button>
-                </div>
-            </div>
-        </section>
+    <div class="floating-menu" id="floatingMenu">
+
+        <button class="floating-option btn-salary">
+            <span class="option-icon option-blue">
+                <i class="fa-solid fa-money-bill-wave"></i>
+            </span>
+
+            <span>
+                <strong>Nova Receita</strong>
+                <small>Salário ou outra entrada</small>
+            </span>
+        </button>
+
+        <button class="floating-option btn-saved">
+            <span class="option-icon option-green">
+                <i class="fa-solid fa-piggy-bank"></i>
+            </span>
+
+            <span>
+                <strong>Guardar Dinheiro</strong>
+                <small>Adicionar valor a uma caixinha</small>
+            </span>
+        </button>
+
+        <button class="floating-option btn-fixed">
+            <span class="option-icon option-orange">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </span>
+
+            <span>
+                <strong>Gasto Fixo</strong>
+                <small>Aluguel, internet e contas</small>
+            </span>
+        </button>
+
+        <button class="floating-option btn-variable">
+            <span class="option-icon option-red">
+                <i class="fa-solid fa-basket-shopping"></i>
+            </span>
+
+            <span>
+                <strong>Gasto Variável</strong>
+                <small>Mercado, alimentação e lazer</small>
+            </span>
+        </button>
+
+        <button class="floating-option btn-travel">
+            <span class="option-icon option-yellow">
+                <i class="fa-solid fa-house"></i>
+            </span>
+
+            <span>
+                <strong>Usar Lazer/Casa</strong>
+                <small>Retirar de uma caixinha</small>
+            </span>
+        </button>
+
+        <button class="floating-option btn-rescue">
+            <span class="option-icon option-purple">
+                <i class="fa-solid fa-unlock-keyhole"></i>
+            </span>
+
+            <span>
+                <strong>Usar Reserva</strong>
+                <small>Resgatar dinheiro guardado</small>
+            </span>
+        </button>
+
+    </div>
+
+    <button
+        class="floating-main-button"
+        id="btnFloatingMenu"
+        type="button"
+        aria-label="Abrir menu de lançamentos"
+        aria-expanded="false"
+    >
+        <i class="fa-solid fa-plus"></i>
+        <span>Novo lançamento</span>
+    </button>
+
+</div>
 
         <div class="dashboard-row">
             
@@ -67,7 +133,7 @@
                     </div>
                     
                     <!-- O Total Guardado não precisa filtrar, pois é um saldo acumulado -->
-                    <div class="card card-green">
+                    <div class="card card-green clickable-card" data-filter="guardados">
                         <div class="card-icon"><i class="fa-solid fa-vault"></i></div>
                         <div class="card-info">
                             <h3>TOTAL GUARDADO</h3>
@@ -115,29 +181,52 @@
 </section>
 
 
-        <h2 class="section-title">Histórico de Lançamentos</h2>
-        <section class="history-section">
-            <div class="history-controls">
-                <div class="category-tabs">
-    <button class="tab-btn active" data-filter="todos">Todos</button>
-    <button class="tab-btn" data-filter="entradas">Apenas Entradas</button>
-    <button class="tab-btn" data-filter="fixos">Gastos Fixos</button>
-    <button class="tab-btn" data-filter="variaveis">Gastos Variáveis</button>
-</div>
-                    <div class="month-selector">
-                    <select>
-                        <option value="07-2026">Julho / 2026</option>
-                        <option value="06-2026">Junho / 2026</option>
-                        <option value="05-2026">Maio / 2026</option>
+        <h2 class="section-title" id="tituloHistorico">Histórico de Lançamentos</h2>
+        <section class="history-section" id="historicoLancamentos">
+            <div class="history-toolbar">
+                <div class="history-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input
+                        type="search"
+                        id="pesquisaHistorico"
+                        placeholder="Pesquisar por descrição ou categoria..."
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="history-selectors">
+                    <select id="mesHistorico" aria-label="Selecionar mês">
+                        <option value="todos">Todos os meses</option>
+                    </select>
+
+                    <select id="ordenacaoHistorico" aria-label="Ordenar histórico">
+                        <option value="recentes">Mais recentes</option>
+                        <option value="antigos">Mais antigos</option>
+                        <option value="maior-valor">Maior valor</option>
+                        <option value="menor-valor">Menor valor</option>
                     </select>
                 </div>
             </div>
 
-            <div class="comparison-bar">
-                💡 <strong>Análise de Variáveis:</strong> Neste mês (Julho), você gastou <strong>R$ 200,00 a menos</strong> em gastos variáveis comparado a Junho. Bom trabalho!
+            <div class="category-tabs" id="filtrosHistorico">
+                <button class="tab-btn active" type="button" data-filter="todos">Todos</button>
+                <button class="tab-btn" type="button" data-filter="entradas">Entradas</button>
+                <button class="tab-btn" type="button" data-filter="fixos">Gastos Fixos</button>
+                <button class="tab-btn" type="button" data-filter="variaveis">Gastos Variáveis</button>
+                <button class="tab-btn" type="button" data-filter="guardados">Guardados</button>
+                <button class="tab-btn" type="button" data-filter="resgates">Resgates</button>
             </div>
 
-            <div style="overflow-x: auto;">
+            <div class="comparison-bar" id="comparacaoHistorico">
+                Faça lançamentos para visualizar a comparação mensal.
+            </div>
+
+            <div class="history-summary">
+                <span id="quantidadeHistorico">0 lançamentos</span>
+                <strong id="totalHistorico">Total movimentado: R$ 0,00</strong>
+            </div>
+
+            <div class="history-table-wrapper">
                 <table>
                     <thead>
                         <tr>
@@ -148,27 +237,14 @@
                             <th>Valor</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>04/07/2026</td>
-                            <td>Recebimento Mensal</td>
-                            <td>Salário</td>
-                            <td class="amount-pos">+ R$ 5.000,00</td>
-                        </tr>
-                        <tr>
-                            <td>03/07/2026</td>
-                            <td>Aluguel / Condomínio</td>
-                            <td>Gasto Fixo</td>
-                            <td class="amount-neg">- R$ 1.500,00</td>
-                        </tr>
-                        <tr>
-                            <td>02/07/2026</td>
-                            <td>Feira e Mercado</td>
-                            <td>Gasto Variável</td>
-                            <td class="amount-neg">- R$ 450,00</td>
-                        </tr>
-                    </tbody>
+                    <tbody id="tbodyHistorico"></tbody>
                 </table>
+
+                <div class="history-empty" id="historicoVazio" hidden>
+                    <i class="fa-solid fa-receipt"></i>
+                    <h3>Nenhum lançamento encontrado</h3>
+                    <p>Altere os filtros ou adicione um novo lançamento.</p>
+                </div>
             </div>
         </section>
 
@@ -223,6 +299,7 @@
     </div>
 <script src="js/utils.js"></script>
 <script src="js/storage.js"></script>
+<script src="js/state.js"></script>
 <script src="js/script.js"></script>
 </body>
 </html>
