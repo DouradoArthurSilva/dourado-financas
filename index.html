@@ -182,6 +182,60 @@
 
 
         <h2 class="section-title" id="tituloHistorico">Histórico de Lançamentos</h2>
+        <section class="recorrencias-section">
+    <div class="section-header">
+        <div>
+            <span class="section-kicker">
+                Planejamento
+            </span>
+
+            <h2>Recorrências mensais</h2>
+
+            <p>
+                Acompanhe e controle seus lançamentos automáticos.
+            </p>
+        </div>
+    </div>
+
+    <div
+        class="recorrencias-resumo"
+        id="recorrenciasResumo"
+    >
+        <span>
+            <strong id="totalRecorrenciasAtivas">0</strong>
+            ativas
+        </span>
+
+        <span>
+            <strong id="totalRecorrenciasPausadas">0</strong>
+            pausadas
+        </span>
+
+        <span>
+            <strong id="totalRecorrenciasEncerradas">0</strong>
+            encerradas
+        </span>
+    </div>
+
+    <div
+        class="recorrencias-lista"
+        id="recorrenciasLista"
+    ></div>
+
+    <div
+        class="recorrencias-vazio"
+        id="recorrenciasVazio"
+        hidden
+    >
+        <i class="fa-solid fa-rotate"></i>
+
+        <h3>Nenhuma recorrência cadastrada</h3>
+
+        <p>
+            Marque “Repetir todo mês” ao criar uma receita ou gasto.
+        </p>
+    </div>
+</section>
         <section class="history-section" id="historicoLancamentos">
             <div class="history-toolbar">
                 <div class="history-search">
@@ -483,6 +537,257 @@
         </div>
     </div>
 </div>
+<div
+    class="modal-overlay"
+    id="modalReativarRecorrencia"
+    aria-hidden="true"
+>
+    <div
+        class="modal-content modal-reativar-recorrencia"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloReativarRecorrencia"
+    >
+        <span class="reativar-recorrencia-icone">
+            <i class="fa-solid fa-play"></i>
+        </span>
+
+        <h3 id="tituloReativarRecorrencia">
+            Reativar recorrência
+        </h3>
+
+        <p>
+            Como deseja tratar os meses que ficaram pendentes durante a pausa?
+        </p>
+
+        <div class="reativar-opcoes">
+            <button
+                type="button"
+                class="reativar-opcao"
+                id="btnRecuperarPendencias"
+            >
+                <i class="fa-solid fa-clock-rotate-left"></i>
+
+                <span>
+                    <strong>Recuperar pendências</strong>
+
+                    <small>
+                        Cria os lançamentos dos meses que não foram processados.
+                    </small>
+                </span>
+            </button>
+
+            <button
+                type="button"
+                class="reativar-opcao"
+                id="btnContinuarMesAtual"
+            >
+                <i class="fa-solid fa-calendar-check"></i>
+
+                <span>
+                    <strong>Continuar deste mês</strong>
+
+                    <small>
+                        Ignora os meses anteriores e continua no mês atual.
+                    </small>
+                </span>
+            </button>
+        </div>
+
+        <div class="modal-actions">
+            <button
+                type="button"
+                class="btn-cancel"
+                id="btnCancelarReativacao"
+            >
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+<div
+    class="modal-overlay"
+    id="modalEditarRecorrencia"
+    aria-hidden="true"
+>
+    <div
+        class="modal-content modal-editar-recorrencia"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloEditarRecorrencia"
+    >
+        <button
+            type="button"
+            class="modal-close"
+            id="btnFecharEdicaoRecorrencia"
+            aria-label="Fechar"
+        >
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <h3 id="tituloEditarRecorrencia">
+            Editar recorrência
+        </h3>
+
+        <p class="modal-recorrencia-aviso">
+            As alterações serão aplicadas somente aos próximos lançamentos.
+        </p>
+
+        <input
+            type="hidden"
+            id="recorrenciaEmEdicaoId"
+        >
+
+        <div class="form-group">
+            <label for="descricaoEdicaoRecorrencia">
+                Descrição
+            </label>
+
+            <input
+                type="text"
+                id="descricaoEdicaoRecorrencia"
+                maxlength="80"
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="valorEdicaoRecorrencia">
+                Valor mensal (R$)
+            </label>
+
+            <input
+                type="number"
+                id="valorEdicaoRecorrencia"
+                min="0.01"
+                step="0.01"
+            >
+        </div>
+
+        <div class="recorrencia-grid">
+            <div class="form-group">
+                <label for="tipoEdicaoRecorrencia">
+                    Tipo
+                </label>
+
+                <select id="tipoEdicaoRecorrencia">
+                    <option value="salario">
+                        Receita
+                    </option>
+
+                    <option value="fixo">
+                        Gasto fixo
+                    </option>
+
+                    <option value="variavel">
+                        Gasto variável
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="diaEdicaoRecorrencia">
+                    Dia do vencimento
+                </label>
+
+                <input
+                    type="number"
+                    id="diaEdicaoRecorrencia"
+                    min="1"
+                    max="31"
+                    step="1"
+                >
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="inicioEdicaoRecorrencia">
+                Competência inicial
+            </label>
+
+            <input
+                type="month"
+                id="inicioEdicaoRecorrencia"
+                disabled
+            >
+
+            <small class="form-helper">
+                O mês inicial não pode ser alterado porque já identifica esta série.
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label for="terminoEdicaoRecorrencia">
+                Quando deve terminar?
+            </label>
+
+            <select id="terminoEdicaoRecorrencia">
+                <option value="nunca">
+                    Nunca
+                </option>
+
+                <option value="quantidade">
+                    Após uma quantidade de meses
+                </option>
+
+                <option value="competencia">
+                    Em determinado mês
+                </option>
+            </select>
+        </div>
+
+        <div
+            class="form-group"
+            id="grupoQuantidadeEdicaoRecorrencia"
+            hidden
+        >
+            <label for="quantidadeEdicaoRecorrencia">
+                Quantidade total de meses
+            </label>
+
+            <input
+                type="number"
+                id="quantidadeEdicaoRecorrencia"
+                min="1"
+                max="600"
+                step="1"
+            >
+        </div>
+
+        <div
+            class="form-group"
+            id="grupoFinalEdicaoRecorrencia"
+            hidden
+        >
+            <label for="finalEdicaoRecorrencia">
+                Repetir até
+            </label>
+
+            <input
+                type="month"
+                id="finalEdicaoRecorrencia"
+            >
+        </div>
+
+        <div class="modal-actions">
+            <button
+                type="button"
+                class="btn-cancel"
+                id="btnCancelarEdicaoRecorrencia"
+            >
+                Cancelar
+            </button>
+
+            <button
+                type="button"
+                class="btn-save"
+                id="btnSalvarEdicaoRecorrencia"
+            >
+                Salvar alterações
+            </button>
+        </div>
+    </div>
+</div>
  <div
     class="modal-overlay"
     id="modalLancamento"
@@ -515,13 +820,123 @@
         <div class="form-group" id="areaPagamento" style="display: none;">
             <label><input type="checkbox" id="isPago"> Já está pago?</label>
         </div>
+<div
+    class="form-group recorrencia-area"
+    id="areaRecorrencia"
+    style="display: none;"
+>
+    <label class="recorrencia-toggle" for="isRecorrente">
+        <span>
+            <input
+                type="checkbox"
+                id="isRecorrente"
+            >
+            Parcelado?
+        </span>
 
-        <div class="form-group" id="areaParcelamento" style="display: none;">
-            <label><input type="checkbox" id="isParcelado"> É parcelado?</label>
-            <div id="qtdParcelasGroup" style="display: none; margin-top: 5px;">
-                <input type="number" id="qtdParcelas" placeholder="Qtd de parcelas">
+        <small>
+            O sistema criará os próximos lançamentos automaticamente.
+        </small>
+    </label>
+
+    <div
+        class="recorrencia-configuracao"
+        id="configuracaoRecorrencia"
+        hidden
+    >
+        <div class="recorrencia-grid">
+            <div class="form-group">
+                <label for="diaVencimentoRecorrencia">
+                    Dia do vencimento
+                </label>
+
+                <input
+                    type="number"
+                    id="diaVencimentoRecorrencia"
+                    min="1"
+                    max="31"
+                    step="1"
+                    inputmode="numeric"
+                >
+
+                <small class="form-helper">
+                    Em meses menores, será usado o último dia.
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="competenciaInicialRecorrencia">
+                    Começar em
+                </label>
+
+                <input
+                    type="month"
+                    id="competenciaInicialRecorrencia"
+                >
             </div>
         </div>
+
+        <div class="form-group">
+            <label for="tipoTerminoRecorrencia">
+                Quando deve terminar?
+            </label>
+
+            <select id="tipoTerminoRecorrencia">
+                <option value="nunca">
+                    Nunca
+                </option>
+
+                <option value="quantidade">
+                    Após uma quantidade de meses
+                </option>
+
+                <option value="competencia">
+                    Em determinado mês
+                </option>
+            </select>
+        </div>
+
+        <div
+            class="form-group"
+            id="grupoQuantidadeRecorrencia"
+            hidden
+        >
+            <label for="quantidadeRecorrencia">
+                Quantidade de meses
+            </label>
+
+            <input
+                type="number"
+                id="quantidadeRecorrencia"
+                min="1"
+                max="600"
+                step="1"
+                inputmode="numeric"
+                placeholder="Ex: 12"
+            >
+
+            <small class="form-helper">
+                O mês inicial conta como a primeira ocorrência.
+            </small>
+        </div>
+
+        <div
+            class="form-group"
+            id="grupoCompetenciaFinalRecorrencia"
+            hidden
+        >
+            <label for="competenciaFinalRecorrencia">
+                Repetir até
+            </label>
+
+            <input
+                type="month"
+                id="competenciaFinalRecorrencia"
+            >
+        </div>
+    </div>
+</div>
+        
 
         <div class="modal-actions">
             <button
@@ -531,7 +946,13 @@
 >
     Cancelar
 </button>
-            <button class="btn-save">Salvar</button>
+           <button
+    class="btn-save"
+    id="btnSalvarLancamento"
+    type="button"
+>
+    Salvar
+</button>
         </div>
     </div>
 </div>

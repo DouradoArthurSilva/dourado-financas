@@ -61,13 +61,44 @@ window.onload = function () {
         });
     }
 
-    renderizarTela();
+  const recorrenciasGeradas =
+    processarRecorrenciasMensais();
+
+renderizarTela();
+
+if (recorrenciasGeradas > 0) {
+    mostrarToast(
+        recorrenciasGeradas === 1
+            ? '1 lançamento recorrente foi gerado.'
+            : `${recorrenciasGeradas} lançamentos recorrentes foram gerados.`,
+        'info'
+    );
+}
 };
 
     // ==========================================
     // 1. ELEMENTOS DA TELA
     // ==========================================
 const elementos = {
+    recorrenciasLista: document.getElementById(
+    'recorrenciasLista'
+),
+
+recorrenciasVazio: document.getElementById(
+    'recorrenciasVazio'
+),
+
+totalRecorrenciasAtivas: document.getElementById(
+    'totalRecorrenciasAtivas'
+),
+
+totalRecorrenciasPausadas: document.getElementById(
+    'totalRecorrenciasPausadas'
+),
+
+totalRecorrenciasEncerradas: document.getElementById(
+    'totalRecorrenciasEncerradas'
+),
     tbodyHistorico: document.getElementById('tbodyHistorico'),
     pesquisaHistorico: document.getElementById('pesquisaHistorico'),
     mesHistorico: document.getElementById('mesHistorico'),
@@ -413,8 +444,421 @@ function gerarIdUnico() {
             });
         }
     }
+function obterTextoTipoRecorrencia(tipo) {
+    const tipos = {
+        salario: 'Receita mensal',
+        fixo: 'Gasto fixo',
+        variavel: 'Gasto variável'
+    };
 
+    return tipos[tipo] || 'Lançamento mensal';
+}
+
+function obterIconeTipoRecorrencia(tipo) {
+    const icones = {
+        salario: 'fa-money-bill-trend-up',
+        fixo: 'fa-receipt',
+        variavel: 'fa-cart-shopping'
+    };
+
+    return icones[tipo] || 'fa-rotate';
+}
+
+function obterTextoTerminoRecorrencia(recorrencia) {
+    const termino = recorrencia.termino || {
+        tipo: 'nunca'
+    };
+
+    if (termino.tipo === 'quantidade') {
+        return `${termino.quantidade} meses`;
+    }
+
+    if (termino.tipo === 'competencia') {
+        const [ano, mes] =
+            termino.competenciaFinal.split('-');
+
+        return `Até ${mes}/${ano}`;
+    }
+
+    return 'Sem data final';
+}
+
+function obterTextoStatusRecorrencia(status) {
+    const textos = {
+        ativa: 'Ativa',
+        pausada: 'Pausada',
+        encerrada: 'Encerrada'
+    };
+
+    return textos[status] || 'Ativa';
+}
+const modalReativarRecorrencia =
+    document.getElementById(
+        'modalReativarRecorrencia'
+    );
+
+let recorrenciaPendenteReativacaoId = null;
+
+function abrirModalReativacao(recorrencia) {
+    recorrenciaPendenteReativacaoId =
+        Number(recorrencia.id);
+
+    document.getElementById(
+        'tituloReativarRecorrencia'
+    ).textContent =
+        `Reativar "${recorrencia.descricao}"`;
+
+    modalReativarRecorrencia.style.display =
+        'flex';
+
+    modalReativarRecorrencia.setAttribute(
+        'aria-hidden',
+        'false'
+    );
+}
+
+function fecharModalReativacao() {
+    recorrenciaPendenteReativacaoId = null;
+
+    modalReativarRecorrencia.style.display =
+        'none';
+
+    modalReativarRecorrencia.setAttribute(
+        'aria-hidden',
+        'true'
+    );
+}
+
+function obterRecorrenciaPendenteReativacao() {
+    return recorrencias.find(
+        item =>
+            Number(item.id) ===
+            recorrenciaPendenteReativacaoId
+    );
+}
+
+function marcarMesesAnterioresComoProcessados(
+    recorrencia
+) {
+    const competenciaAtual =
+        obterCompetenciaAtual();
+
+    const distancia =
+        calcularDistanciaEntreCompetencias(
+            recorrencia.competenciaInicial,
+            competenciaAtual
+        );
+
+    if (distancia <= 0) {
+        return;
+    }
+
+    for (
+        let indice = 0;
+        indice < distancia;
+        indice += 1
+    ) {
+        const competencia =
+            adicionarMesesCompetencia(
+                recorrencia.competenciaInicial,
+                indice
+            );
+
+        if (
+            !recorrenciaPermiteCompetencia(
+                recorrencia,
+                competencia
+            )
+        ) {
+            break;
+        }
+
+        if (
+            !recorrencia.competenciasProcessadas
+                .includes(competencia)
+        ) {
+            recorrencia.competenciasProcessadas
+                .push(competencia);
+        }
+    }
+}
+
+function concluirReativacao(
+    recuperarPendencias
+) {
+    const recorrencia =
+        obterRecorrenciaPendenteReativacao();
+
+    if (!recorrencia) {
+        fecharModalReativacao();
+
+        mostrarToast(
+            'Recorrência não encontrada.',
+            'erro'
+        );
+
+        return;
+    }
+
+    if (!recuperarPendencias) {
+        marcarMesesAnterioresComoProcessados(
+            recorrencia
+        );
+    }
+
+    recorrencia.status = 'ativa';
+    recorrencia.atualizadaEm =
+        new Date().toISOString();
+
+    salvarNoBanco();
+    fecharModalReativacao();
+
+    const quantidadeGerada =
+        processarRecorrenciasMensais();
+
+    renderizarTela();
+
+    if (recuperarPendencias) {
+        mostrarToast(
+            quantidadeGerada > 0
+                ? `${quantidadeGerada} lançamento(s) pendente(s) recuperado(s).`
+                : 'Recorrência reativada. Não havia pendências.',
+            'sucesso'
+        );
+
+        return;
+    }
+
+    mostrarToast(
+        quantidadeGerada > 0
+            ? 'Recorrência reativada a partir do mês atual.'
+            : 'Recorrência reativada.',
+        'sucesso'
+    );
+}
+
+document
+    .getElementById('btnRecuperarPendencias')
+    .addEventListener('click', () => {
+        concluirReativacao(true);
+    });
+
+document
+    .getElementById('btnContinuarMesAtual')
+    .addEventListener('click', () => {
+        concluirReativacao(false);
+    });
+
+document
+    .getElementById('btnCancelarReativacao')
+    .addEventListener(
+        'click',
+        fecharModalReativacao
+    );
+
+modalReativarRecorrencia.addEventListener(
+    'click',
+    evento => {
+        if (
+            evento.target ===
+            modalReativarRecorrencia
+        ) {
+            fecharModalReativacao();
+        }
+    }
+);
+
+function renderizarRecorrencias() {
+    if (!elementos.recorrenciasLista) {
+        return;
+    }
+
+    const totais = recorrencias.reduce(
+        (resultado, recorrencia) => {
+            if (recorrencia.status === 'ativa') {
+                resultado.ativas += 1;
+            } else if (
+                recorrencia.status === 'pausada'
+            ) {
+                resultado.pausadas += 1;
+            } else if (
+                recorrencia.status === 'encerrada'
+            ) {
+                resultado.encerradas += 1;
+            }
+
+            return resultado;
+        },
+        {
+            ativas: 0,
+            pausadas: 0,
+            encerradas: 0
+        }
+    );
+
+    elementos.totalRecorrenciasAtivas.textContent =
+        totais.ativas;
+
+    elementos.totalRecorrenciasPausadas.textContent =
+        totais.pausadas;
+
+    elementos.totalRecorrenciasEncerradas.textContent =
+        totais.encerradas;
+
+    elementos.recorrenciasLista.innerHTML = '';
+
+    elementos.recorrenciasVazio.hidden =
+        recorrencias.length > 0;
+
+    if (recorrencias.length === 0) {
+        return;
+    }
+
+    const recorrenciasOrdenadas = [
+        ...recorrencias
+    ].sort((a, b) => {
+        const ordemStatus = {
+            ativa: 0,
+            pausada: 1,
+            encerrada: 2
+        };
+
+        return (
+            (ordemStatus[a.status] ?? 3) -
+            (ordemStatus[b.status] ?? 3)
+        );
+    });
+
+    recorrenciasOrdenadas.forEach(recorrencia => {
+        const status =
+            recorrencia.status || 'ativa';
+
+        const textoAcao =
+            status === 'ativa'
+                ? 'Pausar'
+                : 'Reativar';
+
+        const acao =
+            status === 'ativa'
+                ? 'pausar'
+                : 'reativar';
+
+        const botaoEstado =
+            status !== 'encerrada'
+                ? `
+                    <button
+                        type="button"
+                        class="btn-recorrencia"
+                        data-acao-recorrencia="${acao}"
+                        data-recorrencia-id="${recorrencia.id}"
+                    >
+                        ${textoAcao}
+                    </button>
+                `
+                : '';
+
+        elementos.recorrenciasLista.insertAdjacentHTML(
+            'beforeend',
+            `
+                <article class="recorrencia-card">
+                    <div class="recorrencia-card-topo">
+                        <div class="recorrencia-identidade">
+                            <span class="recorrencia-icone">
+                                <i class="fa-solid ${obterIconeTipoRecorrencia(recorrencia.tipoLancamento)}"></i>
+                            </span>
+
+                            <div>
+                                <h3>
+                                    ${escaparHTML(recorrencia.descricao)}
+                                </h3>
+
+                                <p>
+                                    ${obterTextoTipoRecorrencia(recorrencia.tipoLancamento)}
+                                </p>
+                            </div>
+                        </div>
+
+                        <span
+                            class="recorrencia-status recorrencia-status-${status}"
+                        >
+                            ${obterTextoStatusRecorrencia(status)}
+                        </span>
+                    </div>
+
+                    <div class="recorrencia-detalhes">
+                        <div class="recorrencia-detalhe">
+                            <span>Valor</span>
+
+                            <strong>
+                                R$ ${formatarMoeda(recorrencia.valor)}
+                            </strong>
+                        </div>
+
+                        <div class="recorrencia-detalhe">
+                            <span>Vencimento</span>
+
+                            <strong>
+                                Dia ${recorrencia.diaVencimento}
+                            </strong>
+                        </div>
+
+                        <div class="recorrencia-detalhe">
+                            <span>Início</span>
+
+                            <strong>
+                                ${recorrencia.competenciaInicial.split('-').reverse().join('/')}
+                            </strong>
+                        </div>
+
+                        <div class="recorrencia-detalhe">
+                            <span>Término</span>
+
+                            <strong>
+                                ${obterTextoTerminoRecorrencia(recorrencia)}
+                            </strong>
+                        </div>
+                    </div>
+
+                  <div class="recorrencia-acoes">
+    ${
+        status !== 'encerrada'
+            ? `
+                <button
+                    type="button"
+                    class="btn-recorrencia"
+                    data-acao-recorrencia="editar"
+                    data-recorrencia-id="${recorrencia.id}"
+                >
+                    Editar
+                </button>
+            `
+            : ''
+    }
+
+    ${botaoEstado}
+
+                        ${
+                            status !== 'encerrada'
+                                ? `
+                                    <button
+                                        type="button"
+                                        class="btn-recorrencia btn-recorrencia-perigo"
+                                        data-acao-recorrencia="encerrar"
+                                        data-recorrencia-id="${recorrencia.id}"
+                                    >
+                                        Encerrar
+                                    </button>
+                                `
+                                : ''
+                        }
+                    </div>
+                </article>
+            `
+        );
+    });
+}
     function renderizarTela() {
+        renderizarRecorrencias();
         estado.totalSalario = 0;
         estado.totalGuardado = 0;
         estado.totalFixo = 0;
@@ -1169,6 +1613,107 @@ const tipoLancamento = document.getElementById(
 const areaCaixinha = document.getElementById(
     'areaCaixinha'
 );
+const areaRecorrencia = document.getElementById(
+    'areaRecorrencia'
+);
+
+const isRecorrente = document.getElementById(
+    'isRecorrente'
+);
+
+const configuracaoRecorrencia = document.getElementById(
+    'configuracaoRecorrencia'
+);
+
+const diaVencimentoRecorrencia = document.getElementById(
+    'diaVencimentoRecorrencia'
+);
+
+const competenciaInicialRecorrencia =
+    document.getElementById(
+        'competenciaInicialRecorrencia'
+    );
+
+const tipoTerminoRecorrencia = document.getElementById(
+    'tipoTerminoRecorrencia'
+);
+
+const grupoQuantidadeRecorrencia =
+    document.getElementById(
+        'grupoQuantidadeRecorrencia'
+    );
+
+const quantidadeRecorrencia = document.getElementById(
+    'quantidadeRecorrencia'
+);
+
+const grupoCompetenciaFinalRecorrencia =
+    document.getElementById(
+        'grupoCompetenciaFinalRecorrencia'
+    );
+
+const competenciaFinalRecorrencia =
+    document.getElementById(
+        'competenciaFinalRecorrencia'
+    );function atualizarCamposTerminoRecorrencia() {
+    const tipoTermino = tipoTerminoRecorrencia.value;
+
+    grupoQuantidadeRecorrencia.hidden =
+        tipoTermino !== 'quantidade';
+
+    grupoCompetenciaFinalRecorrencia.hidden =
+        tipoTermino !== 'competencia';
+}
+
+function atualizarConfiguracaoRecorrencia() {
+    configuracaoRecorrencia.hidden =
+        !isRecorrente.checked;
+}
+
+function limparFormularioRecorrencia() {
+    const hoje = new Date();
+
+    isRecorrente.checked = false;
+    configuracaoRecorrencia.hidden = true;
+
+    diaVencimentoRecorrencia.value =
+        String(hoje.getDate());
+
+    competenciaInicialRecorrencia.value =
+        obterCompetenciaAtual();
+
+    competenciaInicialRecorrencia.min =
+        obterCompetenciaAtual();
+
+    tipoTerminoRecorrencia.value = 'nunca';
+
+    quantidadeRecorrencia.value = '';
+    competenciaFinalRecorrencia.value = '';
+
+    competenciaFinalRecorrencia.min =
+        obterCompetenciaAtual();
+
+    atualizarCamposTerminoRecorrencia();
+}
+
+isRecorrente.addEventListener(
+    'change',
+    atualizarConfiguracaoRecorrencia
+);
+
+tipoTerminoRecorrencia.addEventListener(
+    'change',
+    atualizarCamposTerminoRecorrencia
+);
+
+competenciaInicialRecorrencia.addEventListener(
+    'change',
+    () => {
+        competenciaFinalRecorrencia.min =
+            competenciaInicialRecorrencia.value ||
+            obterCompetenciaAtual();
+    }
+);
 const floatingActions = document.getElementById('floatingActions');
 const btnFloatingMenu = document.getElementById('btnFloatingMenu');
 const floatingMenu = document.getElementById('floatingMenu');
@@ -1238,8 +1783,20 @@ document.addEventListener('keydown', function(evento) {
 
     function abrirModal(tipo, titulo) {
         tipoLancamento.value = tipo; 
-        document.getElementById('modalTitle').innerText = titulo; 
-        document.getElementById('areaParcelamento').style.display = (tipo === 'fixo' || tipo === 'variavel') ? 'block' : 'none';
+       tipoLancamento.value = tipo;
+document.getElementById('modalTitle').innerText = titulo;
+
+limparFormularioRecorrencia();
+
+const permiteRecorrencia = [
+    'salario',
+    'fixo',
+    'variavel'
+].includes(tipo);
+
+areaRecorrencia.style.display =
+    permiteRecorrencia ? 'block' : 'none';
+   
         document.getElementById('areaPagamento').style.display = (tipo === 'fixo' || tipo === 'variavel') ? 'block' : 'none';
         
         
@@ -1254,10 +1811,23 @@ modalOverlay.setAttribute('aria-hidden', 'false');
     'btnCancelarLancamento'
 );
 
-btnCancelarLancamento.addEventListener('click', () => {
-modalOverlay.style.display = 'none';
-modalOverlay.setAttribute('aria-hidden', 'true');
-});
+function fecharModalLancamento() {
+    modalOverlay.style.display = 'none';
+    modalOverlay.setAttribute(
+        'aria-hidden',
+        'true'
+    );
+
+    document.getElementById('descricao').value = '';
+    document.getElementById('valor').value = '';
+
+    limparFormularioRecorrencia();
+}
+
+btnCancelarLancamento.addEventListener(
+    'click',
+    fecharModalLancamento
+);
 
     document.querySelector('.btn-salary').addEventListener('click', () => abrirModal('salario', 'Inserir Receita'));
     document.querySelector('.btn-saved').addEventListener('click', () => abrirModal('guardado', 'Guardar Dinheiro'));
@@ -1291,90 +1861,689 @@ modalOverlay.setAttribute('aria-hidden', 'true');
         return saldo;
     }, 0);
 }
-    document.querySelector('.btn-save').addEventListener('click', function() {
+document
+    .getElementById('btnSalvarLancamento')
+    .addEventListener('click', function() {
         const tipo = tipoLancamento.value;
-        let desc = document.getElementById('descricao').value;
-        const val = Number(document.getElementById('valor').value);
-        const caixinhaId = Number(document.getElementById('caixinhaSelect').value); // Pega qual caixinha foi escolhida
-if (desc.trim() === '' || val <= 0) {
-    mostrarToast(
-        'Preencha a descrição e informe um valor válido.',
-        'aviso'
-    );
 
-    return;
-}
+        const descricao = document
+            .getElementById('descricao')
+            .value
+            .trim();
 
-if (
-    (tipo === 'guardado' || tipo === 'resgate') &&
-    !caixinhaId
-) {
-    mostrarToast(
-        'Crie uma caixinha antes de realizar esta operação.',
-        'aviso'
-    );
-
-    return;
-}
-
-if (tipo === 'resgate') {
-    const saldoDisponivel = calcularSaldoCaixinha(caixinhaId);
-
-    if (val > saldoDisponivel) {
-        mostrarToast(
-            `Saldo insuficiente. Disponível: R$ ${formatarMoeda(saldoDisponivel)}.`,
-            'erro'
+        const valor = Number(
+            document.getElementById('valor').value
         );
 
-        return;
-    }
-}
+        const caixinhaId = Number(
+            document.getElementById(
+                'caixinhaSelect'
+            ).value
+        );
 
-let categoriaText = '', classeCor = '', sinal = '';
+        if (!descricao || !Number.isFinite(valor) || valor <= 0) {
+            mostrarToast(
+                'Preencha a descrição e informe um valor válido.',
+                'aviso'
+            );
 
-        if (tipo === 'salario') { categoriaText = 'Salário'; classeCor = 'amount-pos'; sinal = '+'; }
-        else if (tipo === 'guardado') { categoriaText = 'Reserva'; classeCor = 'amount-pos'; sinal = '+'; }
-        else if (tipo === 'resgate') { categoriaText = 'Uso da Reserva'; classeCor = 'amount-neg'; sinal = '-'; }
-        else if (tipo === 'fixo') { categoriaText = 'Gasto Fixo'; classeCor = 'amount-neg'; sinal = '-'; }
-        else if (tipo === 'variavel') { categoriaText = 'Gasto Variável'; classeCor = 'amount-neg'; sinal = '-'; }
+            return;
+        }
 
-        const dataAtual = new Date();
+        if (
+            (tipo === 'guardado' || tipo === 'resgate') &&
+            !caixinhaId
+        ) {
+            mostrarToast(
+                'Crie uma caixinha antes de realizar esta operação.',
+                'aviso'
+            );
+
+            return;
+        }
+
+        if (tipo === 'resgate') {
+            const saldoDisponivel =
+                calcularSaldoCaixinha(caixinhaId);
+
+            if (valor > saldoDisponivel) {
+                mostrarToast(
+                    `Saldo insuficiente. Disponível: R$ ${formatarMoeda(saldoDisponivel)}.`,
+                    'erro'
+                );
+
+                return;
+            }
+        }
+
+        const recorrente =
+            areaRecorrencia.style.display !== 'none' &&
+            isRecorrente.checked;
+
+        let dadosTermino = {
+            tipo: 'nunca',
+            quantidade: null,
+            competenciaFinal: null
+        };
+
+        let competenciaInicial = null;
+        let diaVencimento = null;
+
+        if (recorrente) {
+            diaVencimento = Number(
+                diaVencimentoRecorrencia.value
+            );
+
+            competenciaInicial =
+                competenciaInicialRecorrencia.value;
+
+            const tipoTermino =
+                tipoTerminoRecorrencia.value;
+
+            if (
+                !Number.isInteger(diaVencimento) ||
+                diaVencimento < 1 ||
+                diaVencimento > 31
+            ) {
+                mostrarToast(
+                    'Informe um dia de vencimento entre 1 e 31.',
+                    'aviso'
+                );
+
+                diaVencimentoRecorrencia.focus();
+                return;
+            }
+
+            if (!competenciaInicial) {
+                mostrarToast(
+                    'Informe o mês inicial da recorrência.',
+                    'aviso'
+                );
+
+                competenciaInicialRecorrencia.focus();
+                return;
+            }
+
+            if (
+                competenciaInicial <
+                obterCompetenciaAtual()
+            ) {
+                mostrarToast(
+                    'O início da recorrência não pode estar no passado.',
+                    'aviso'
+                );
+
+                competenciaInicialRecorrencia.focus();
+                return;
+            }
+
+            if (tipoTermino === 'quantidade') {
+                const quantidade = Number(
+                    quantidadeRecorrencia.value
+                );
+
+                if (
+                    !Number.isInteger(quantidade) ||
+                    quantidade < 1 ||
+                    quantidade > 600
+                ) {
+                    mostrarToast(
+                        'Informe uma quantidade entre 1 e 600 meses.',
+                        'aviso'
+                    );
+
+                    quantidadeRecorrencia.focus();
+                    return;
+                }
+
+                dadosTermino = {
+                    tipo: 'quantidade',
+                    quantidade,
+                    competenciaFinal: null
+                };
+            }
+
+            if (tipoTermino === 'competencia') {
+                const competenciaFinal =
+                    competenciaFinalRecorrencia.value;
+
+                if (!competenciaFinal) {
+                    mostrarToast(
+                        'Informe o último mês da recorrência.',
+                        'aviso'
+                    );
+
+                    competenciaFinalRecorrencia.focus();
+                    return;
+                }
+
+                if (
+                    competenciaFinal <
+                    competenciaInicial
+                ) {
+                    mostrarToast(
+                        'O mês final não pode ser anterior ao mês inicial.',
+                        'aviso'
+                    );
+
+                    competenciaFinalRecorrencia.focus();
+                    return;
+                }
+
+                dadosTermino = {
+                    tipo: 'competencia',
+                    quantidade: null,
+                    competenciaFinal
+                };
+            }
+        }
+
+        let categoriaText = '';
+        let classeCor = '';
+        let sinal = '';
+
+        if (tipo === 'salario') {
+            categoriaText = 'Salário';
+            classeCor = 'amount-pos';
+            sinal = '+';
+        } else if (tipo === 'guardado') {
+            categoriaText = 'Reserva';
+            classeCor = 'amount-pos';
+            sinal = '+';
+        } else if (tipo === 'resgate') {
+            categoriaText = 'Uso da Reserva';
+            classeCor = 'amount-neg';
+            sinal = '-';
+        } else if (tipo === 'fixo') {
+            categoriaText = 'Gasto Fixo';
+            classeCor = 'amount-neg';
+            sinal = '-';
+        } else if (tipo === 'variavel') {
+            categoriaText = 'Gasto Variável';
+            classeCor = 'amount-neg';
+            sinal = '-';
+        }
+
+        const agora = new Date();
+        const competenciaAtual =
+            obterCompetenciaAtual();
+
+        let recorrenciaId = null;
+
+        if (recorrente) {
+            recorrenciaId = gerarIdUnico();
+
+            const processarCompetenciaAtual =
+                competenciaInicial === competenciaAtual;
+
+            recorrencias.push({
+                id: recorrenciaId,
+                status: 'ativa',
+                frequencia: 'mensal',
+                descricao,
+                valor,
+                tipoLancamento: tipo,
+                pagamento: '',
+                caixinhaId: null,
+                diaVencimento,
+                competenciaInicial,
+                termino: dadosTermino,
+                competenciasProcessadas:
+                    processarCompetenciaAtual
+                        ? [competenciaAtual]
+                        : [],
+                criadaEm: agora.toISOString(),
+                atualizadaEm: agora.toISOString()
+            });
+
+            if (!processarCompetenciaAtual) {
+                salvarNoBanco();
+                fecharModalLancamento();
+
+                mostrarToast(
+                    'Recorrência criada para começar no mês escolhido.',
+                    'sucesso'
+                );
+
+                return;
+            }
+        }
+
         transacoes.push({
-            id: Date.now(),
-            tipo: tipo,
-            caixinhaId: (tipo === 'guardado' || tipo === 'resgate') ? caixinhaId : null, // Salva o ID da caixinha
-            descricao: desc,
-            valor: val,
-            data: `${String(dataAtual.getDate()).padStart(2, '0')}/${String(dataAtual.getMonth() + 1).padStart(2, '0')}/${dataAtual.getFullYear()}`,
-            categoriaText: categoriaText,
-            classeCor: classeCor,
-            sinal: sinal,
-            isPago: document.getElementById('isPago') ? document.getElementById('isPago').checked : false
+            id: gerarIdUnico(),
+            tipo,
+            caixinhaId:
+                tipo === 'guardado' ||
+                tipo === 'resgate'
+                    ? caixinhaId
+                    : null,
+            descricao,
+            valor,
+            data:
+                `${String(agora.getDate()).padStart(2, '0')}/` +
+                `${String(agora.getMonth() + 1).padStart(2, '0')}/` +
+                `${agora.getFullYear()}`,
+            competencia: competenciaAtual,
+            recorrenciaId,
+            origem: recorrente
+                ? 'recorrencia'
+                : 'manual',
+            categoriaText,
+            classeCor,
+            sinal,
+            isPago:
+                document.getElementById('isPago')
+                    ? document.getElementById(
+                        'isPago'
+                    ).checked
+                    : false
         });
 
         salvarNoBanco();
+        renderizarTela();
+        fecharModalLancamento();
 
-document.getElementById('descricao').value = '';
-document.getElementById('valor').value = '';
+        const mensagensSucesso = {
+            salario:
+                'Receita adicionada com sucesso.',
+            guardado:
+                'Dinheiro guardado com sucesso.',
+            resgate:
+                'Resgate realizado com sucesso.',
+            fixo:
+                'Gasto fixo adicionado com sucesso.',
+            variavel:
+                'Gasto variável adicionado com sucesso.'
+        };
 
-renderizarTela();
+        mostrarToast(
+            recorrente
+                ? 'Lançamento e recorrência criados com sucesso.'
+                : mensagensSucesso[tipo] ||
+                    'Lançamento salvo com sucesso.',
+            'sucesso'
+        );
+    });
+    // ==========================================
+// 6. PROCESSAMENTO DAS RECORRÊNCIAS MENSAIS
+// ==========================================
+function converterCompetenciaEmData(competencia) {
+    const [ano, mes] = String(competencia)
+        .split('-')
+        .map(Number);
 
-modalOverlay.style.display = 'none';
+    if (
+        !Number.isInteger(ano) ||
+        !Number.isInteger(mes) ||
+        mes < 1 ||
+        mes > 12
+    ) {
+        return null;
+    }
 
-const mensagensSucesso = {
-    salario: 'Receita adicionada com sucesso.',
-    guardado: 'Dinheiro guardado com sucesso.',
-    resgate: 'Resgate realizado com sucesso.',
-    fixo: 'Gasto fixo adicionado com sucesso.',
-    variavel: 'Gasto variável adicionado com sucesso.'
-};
+    return new Date(ano, mes - 1, 1);
+}
 
-mostrarToast(
-    mensagensSucesso[tipo] || 'Lançamento salvo com sucesso.',
-    'sucesso'
-);
-    });    
+function adicionarMesesCompetencia(
+    competencia,
+    quantidadeMeses
+) {
+    const data = converterCompetenciaEmData(
+        competencia
+    );
 
+    if (!data) {
+        return '';
+    }
+
+    data.setMonth(
+        data.getMonth() + quantidadeMeses
+    );
+
+    return (
+        `${data.getFullYear()}-` +
+        `${String(data.getMonth() + 1).padStart(2, '0')}`
+    );
+}
+
+function calcularDistanciaEntreCompetencias(
+    competenciaInicial,
+    competenciaFinal
+) {
+    const inicio = converterCompetenciaEmData(
+        competenciaInicial
+    );
+
+    const fim = converterCompetenciaEmData(
+        competenciaFinal
+    );
+
+    if (!inicio || !fim) {
+        return -1;
+    }
+
+    return (
+        (fim.getFullYear() - inicio.getFullYear()) * 12 +
+        (fim.getMonth() - inicio.getMonth())
+    );
+}
+
+function obterUltimoDiaDoMes(
+    competencia,
+    diaDesejado
+) {
+    const data = converterCompetenciaEmData(
+        competencia
+    );
+
+    if (!data) {
+        return null;
+    }
+
+    const ano = data.getFullYear();
+    const mes = data.getMonth();
+
+    const ultimoDia = new Date(
+        ano,
+        mes + 1,
+        0
+    ).getDate();
+
+    const dia = Math.min(
+        Math.max(Number(diaDesejado) || 1, 1),
+        ultimoDia
+    );
+
+    return new Date(ano, mes, dia);
+}
+
+function formatarDataTransacao(data) {
+    return (
+        `${String(data.getDate()).padStart(2, '0')}/` +
+        `${String(data.getMonth() + 1).padStart(2, '0')}/` +
+        `${data.getFullYear()}`
+    );
+}
+
+function obterDadosVisuaisRecorrencia(tipo) {
+    const configuracoes = {
+        salario: {
+            categoriaText: 'Salário',
+            classeCor: 'amount-pos',
+            sinal: '+'
+        },
+        fixo: {
+            categoriaText: 'Gasto Fixo',
+            classeCor: 'amount-neg',
+            sinal: '-'
+        },
+        variavel: {
+            categoriaText: 'Gasto Variável',
+            classeCor: 'amount-neg',
+            sinal: '-'
+        }
+    };
+
+    return configuracoes[tipo] || null;
+}
+
+function recorrenciaPermiteCompetencia(
+    recorrencia,
+    competencia
+) {
+    const distancia =
+        calcularDistanciaEntreCompetencias(
+            recorrencia.competenciaInicial,
+            competencia
+        );
+
+    if (distancia < 0) {
+        return false;
+    }
+
+    const termino = recorrencia.termino || {
+        tipo: 'nunca'
+    };
+
+    if (termino.tipo === 'quantidade') {
+        return distancia < Number(
+            termino.quantidade
+        );
+    }
+
+    if (termino.tipo === 'competencia') {
+        return (
+            competencia <=
+            termino.competenciaFinal
+        );
+    }
+
+    return true;
+}
+
+function obterUltimaCompetenciaRecorrencia(
+    recorrencia
+) {
+    const termino = recorrencia.termino || {
+        tipo: 'nunca'
+    };
+
+    if (termino.tipo === 'quantidade') {
+        return adicionarMesesCompetencia(
+            recorrencia.competenciaInicial,
+            Number(termino.quantidade) - 1
+        );
+    }
+
+    if (termino.tipo === 'competencia') {
+        return termino.competenciaFinal;
+    }
+
+    return null;
+}
+
+function existeTransacaoDaRecorrencia(
+    recorrenciaId,
+    competencia
+) {
+    return transacoes.some(transacao => {
+        return (
+            Number(transacao.recorrenciaId) ===
+                Number(recorrenciaId) &&
+            transacao.competencia === competencia
+        );
+    });
+}
+
+function criarTransacaoDaRecorrencia(
+    recorrencia,
+    competencia
+) {
+    const dadosVisuais =
+        obterDadosVisuaisRecorrencia(
+            recorrencia.tipoLancamento
+        );
+
+    if (!dadosVisuais) {
+        return false;
+    }
+
+    const dataVencimento =
+        obterUltimoDiaDoMes(
+            competencia,
+            recorrencia.diaVencimento
+        );
+
+    if (!dataVencimento) {
+        return false;
+    }
+
+    transacoes.push({
+        id: gerarIdUnico(),
+
+        tipo: recorrencia.tipoLancamento,
+
+        caixinhaId: null,
+
+        descricao: recorrencia.descricao,
+
+        valor: Number(recorrencia.valor),
+
+        data: formatarDataTransacao(
+            dataVencimento
+        ),
+
+        competencia,
+
+        recorrenciaId: recorrencia.id,
+
+        origem: 'recorrencia',
+
+        categoriaText:
+            dadosVisuais.categoriaText,
+
+        classeCor:
+            dadosVisuais.classeCor,
+
+        sinal: dadosVisuais.sinal,
+
+        isPago: false
+    });
+
+    return true;
+}
+
+function processarRecorrenciasMensais() {
+    if (!Array.isArray(recorrencias)) {
+        return 0;
+    }
+
+    const competenciaAtual =
+        obterCompetenciaAtual();
+
+    let quantidadeGerada = 0;
+    let dadosAlterados = false;
+
+    recorrencias.forEach(recorrencia => {
+        if (recorrencia.status !== 'ativa') {
+            return;
+        }
+
+        if (
+            !recorrencia.descricao ||
+            !Number.isFinite(
+                Number(recorrencia.valor)
+            ) ||
+            Number(recorrencia.valor) <= 0
+        ) {
+            return;
+        }
+
+        const distanciaAteAtual =
+            calcularDistanciaEntreCompetencias(
+                recorrencia.competenciaInicial,
+                competenciaAtual
+            );
+
+        if (distanciaAteAtual < 0) {
+            return;
+        }
+
+        if (
+            !Array.isArray(
+                recorrencia.competenciasProcessadas
+            )
+        ) {
+            recorrencia.competenciasProcessadas = [];
+            dadosAlterados = true;
+        }
+
+        for (
+            let indiceMes = 0;
+            indiceMes <= distanciaAteAtual;
+            indiceMes += 1
+        ) {
+            const competencia =
+                adicionarMesesCompetencia(
+                    recorrencia.competenciaInicial,
+                    indiceMes
+                );
+
+            if (
+                !recorrenciaPermiteCompetencia(
+                    recorrencia,
+                    competencia
+                )
+            ) {
+                break;
+            }
+
+            if (
+                recorrencia.competenciasProcessadas
+                    .includes(competencia)
+            ) {
+                continue;
+            }
+
+            const jaExiste =
+                existeTransacaoDaRecorrencia(
+                    recorrencia.id,
+                    competencia
+                );
+
+            if (jaExiste) {
+                recorrencia.competenciasProcessadas
+                    .push(competencia);
+
+                dadosAlterados = true;
+                continue;
+            }
+
+            const criouTransacao =
+                criarTransacaoDaRecorrencia(
+                    recorrencia,
+                    competencia
+                );
+
+            if (!criouTransacao) {
+                continue;
+            }
+
+            recorrencia.competenciasProcessadas
+                .push(competencia);
+
+            recorrencia.atualizadaEm =
+                new Date().toISOString();
+
+            quantidadeGerada += 1;
+            dadosAlterados = true;
+        }
+
+        const ultimaCompetencia =
+            obterUltimaCompetenciaRecorrencia(
+                recorrencia
+            );
+
+        if (
+            ultimaCompetencia &&
+            competenciaAtual >= ultimaCompetencia &&
+            recorrencia.competenciasProcessadas
+                .includes(ultimaCompetencia)
+        ) {
+            recorrencia.status = 'encerrada';
+            recorrencia.atualizadaEm =
+                new Date().toISOString();
+
+            dadosAlterados = true;
+        }
+    });
+
+    if (dadosAlterados) {
+        salvarNoBanco();
+    }
+
+    return quantidadeGerada;
+}
     // ==========================================
     // 6. HISTÓRICO: FILTROS, PESQUISA E AÇÕES
     // ==========================================
@@ -1464,4 +2633,447 @@ mostrarToast(
             }
         });
     }
+    const modalEditarRecorrencia =
+    document.getElementById(
+        'modalEditarRecorrencia'
+    );
 
+const recorrenciaEmEdicaoId =
+    document.getElementById(
+        'recorrenciaEmEdicaoId'
+    );
+
+const descricaoEdicaoRecorrencia =
+    document.getElementById(
+        'descricaoEdicaoRecorrencia'
+    );
+
+const valorEdicaoRecorrencia =
+    document.getElementById(
+        'valorEdicaoRecorrencia'
+    );
+
+const tipoEdicaoRecorrencia =
+    document.getElementById(
+        'tipoEdicaoRecorrencia'
+    );
+
+const diaEdicaoRecorrencia =
+    document.getElementById(
+        'diaEdicaoRecorrencia'
+    );
+
+const inicioEdicaoRecorrencia =
+    document.getElementById(
+        'inicioEdicaoRecorrencia'
+    );
+
+const terminoEdicaoRecorrencia =
+    document.getElementById(
+        'terminoEdicaoRecorrencia'
+    );
+
+const grupoQuantidadeEdicaoRecorrencia =
+    document.getElementById(
+        'grupoQuantidadeEdicaoRecorrencia'
+    );
+
+const quantidadeEdicaoRecorrencia =
+    document.getElementById(
+        'quantidadeEdicaoRecorrencia'
+    );
+
+const grupoFinalEdicaoRecorrencia =
+    document.getElementById(
+        'grupoFinalEdicaoRecorrencia'
+    );
+
+const finalEdicaoRecorrencia =
+    document.getElementById(
+        'finalEdicaoRecorrencia'
+    );
+
+function atualizarTerminoEdicaoRecorrencia() {
+    const tipo =
+        terminoEdicaoRecorrencia.value;
+
+    grupoQuantidadeEdicaoRecorrencia.hidden =
+        tipo !== 'quantidade';
+
+    grupoFinalEdicaoRecorrencia.hidden =
+        tipo !== 'competencia';
+}
+
+function abrirEdicaoRecorrencia(recorrencia) {
+    recorrenciaEmEdicaoId.value =
+        String(recorrencia.id);
+
+    descricaoEdicaoRecorrencia.value =
+        recorrencia.descricao;
+
+    valorEdicaoRecorrencia.value =
+        recorrencia.valor;
+
+    tipoEdicaoRecorrencia.value =
+        recorrencia.tipoLancamento;
+
+    diaEdicaoRecorrencia.value =
+        recorrencia.diaVencimento;
+
+    inicioEdicaoRecorrencia.value =
+        recorrencia.competenciaInicial;
+
+    const termino = recorrencia.termino || {
+        tipo: 'nunca',
+        quantidade: null,
+        competenciaFinal: null
+    };
+
+    terminoEdicaoRecorrencia.value =
+        termino.tipo;
+
+    quantidadeEdicaoRecorrencia.value =
+        termino.quantidade || '';
+
+    finalEdicaoRecorrencia.value =
+        termino.competenciaFinal || '';
+
+    finalEdicaoRecorrencia.min =
+        recorrencia.competenciaInicial;
+
+    atualizarTerminoEdicaoRecorrencia();
+
+    modalEditarRecorrencia.style.display =
+        'flex';
+
+    modalEditarRecorrencia.setAttribute(
+        'aria-hidden',
+        'false'
+    );
+
+    setTimeout(() => {
+        descricaoEdicaoRecorrencia.focus();
+    }, 50);
+}
+
+function fecharEdicaoRecorrencia() {
+    modalEditarRecorrencia.style.display =
+        'none';
+
+    modalEditarRecorrencia.setAttribute(
+        'aria-hidden',
+        'true'
+    );
+
+    recorrenciaEmEdicaoId.value = '';
+}
+
+function salvarEdicaoRecorrencia() {
+    const id = Number(
+        recorrenciaEmEdicaoId.value
+    );
+
+    const recorrencia = recorrencias.find(
+        item => Number(item.id) === id
+    );
+
+    if (!recorrencia) {
+        fecharEdicaoRecorrencia();
+
+        mostrarToast(
+            'Recorrência não encontrada.',
+            'erro'
+        );
+
+        return;
+    }
+
+    const descricao =
+        descricaoEdicaoRecorrencia.value.trim();
+
+    const valor = Number(
+        valorEdicaoRecorrencia.value
+    );
+
+    const tipo =
+        tipoEdicaoRecorrencia.value;
+
+    const dia = Number(
+        diaEdicaoRecorrencia.value
+    );
+
+    const tipoTermino =
+        terminoEdicaoRecorrencia.value;
+
+    if (!descricao) {
+        mostrarToast(
+            'Informe a descrição da recorrência.',
+            'aviso'
+        );
+
+        descricaoEdicaoRecorrencia.focus();
+        return;
+    }
+
+    if (
+        !Number.isFinite(valor) ||
+        valor <= 0
+    ) {
+        mostrarToast(
+            'Informe um valor maior que zero.',
+            'aviso'
+        );
+
+        valorEdicaoRecorrencia.focus();
+        return;
+    }
+
+    if (
+        !['salario', 'fixo', 'variavel']
+            .includes(tipo)
+    ) {
+        mostrarToast(
+            'Selecione um tipo válido.',
+            'erro'
+        );
+
+        return;
+    }
+
+    if (
+        !Number.isInteger(dia) ||
+        dia < 1 ||
+        dia > 31
+    ) {
+        mostrarToast(
+            'Informe um dia entre 1 e 31.',
+            'aviso'
+        );
+
+        diaEdicaoRecorrencia.focus();
+        return;
+    }
+
+    let termino = {
+        tipo: 'nunca',
+        quantidade: null,
+        competenciaFinal: null
+    };
+
+    if (tipoTermino === 'quantidade') {
+        const quantidade = Number(
+            quantidadeEdicaoRecorrencia.value
+        );
+
+        if (
+            !Number.isInteger(quantidade) ||
+            quantidade < 1 ||
+            quantidade > 600
+        ) {
+            mostrarToast(
+                'Informe uma quantidade entre 1 e 600 meses.',
+                'aviso'
+            );
+
+            quantidadeEdicaoRecorrencia.focus();
+            return;
+        }
+
+        termino = {
+            tipo: 'quantidade',
+            quantidade,
+            competenciaFinal: null
+        };
+    }
+
+    if (tipoTermino === 'competencia') {
+        const competenciaFinal =
+            finalEdicaoRecorrencia.value;
+
+        if (!competenciaFinal) {
+            mostrarToast(
+                'Informe o último mês da recorrência.',
+                'aviso'
+            );
+
+            finalEdicaoRecorrencia.focus();
+            return;
+        }
+
+        if (
+            competenciaFinal <
+            recorrencia.competenciaInicial
+        ) {
+            mostrarToast(
+                'O mês final não pode ser anterior ao início.',
+                'aviso'
+            );
+
+            finalEdicaoRecorrencia.focus();
+            return;
+        }
+
+        termino = {
+            tipo: 'competencia',
+            quantidade: null,
+            competenciaFinal
+        };
+    }
+
+    recorrencia.descricao = descricao;
+    recorrencia.valor = valor;
+    recorrencia.tipoLancamento = tipo;
+    recorrencia.diaVencimento = dia;
+    recorrencia.termino = termino;
+    recorrencia.atualizadaEm =
+        new Date().toISOString();
+
+    salvarNoBanco();
+    fecharEdicaoRecorrencia();
+    renderizarTela();
+
+    mostrarToast(
+        'Recorrência atualizada. Os lançamentos anteriores foram preservados.',
+        'sucesso'
+    );
+}
+
+terminoEdicaoRecorrencia.addEventListener(
+    'change',
+    atualizarTerminoEdicaoRecorrencia
+);
+
+document
+    .getElementById(
+        'btnSalvarEdicaoRecorrencia'
+    )
+    .addEventListener(
+        'click',
+        salvarEdicaoRecorrencia
+    );
+
+document
+    .getElementById(
+        'btnCancelarEdicaoRecorrencia'
+    )
+    .addEventListener(
+        'click',
+        fecharEdicaoRecorrencia
+    );
+
+document
+    .getElementById(
+        'btnFecharEdicaoRecorrencia'
+    )
+    .addEventListener(
+        'click',
+        fecharEdicaoRecorrencia
+    );
+
+modalEditarRecorrencia.addEventListener(
+    'click',
+    evento => {
+        if (
+            evento.target ===
+            modalEditarRecorrencia
+        ) {
+            fecharEdicaoRecorrencia();
+        }
+    }
+);
+
+document.addEventListener(
+    'keydown',
+    evento => {
+        if (
+            evento.key === 'Escape' &&
+            modalEditarRecorrencia.style
+                .display === 'flex'
+        ) {
+            fecharEdicaoRecorrencia();
+        }
+    }
+);
+
+if (elementos.recorrenciasLista) {
+    elementos.recorrenciasLista.addEventListener(
+        'click',
+        evento => {
+            const botao = evento.target.closest(
+                '[data-acao-recorrencia][data-recorrencia-id]'
+            );
+
+            if (!botao) {
+                return;
+            }
+
+            const id = Number(
+                botao.dataset.recorrenciaId
+            );
+
+            const acao =
+                botao.dataset.acaoRecorrencia;
+
+            const recorrencia = recorrencias.find(
+                item => Number(item.id) === id
+            );
+
+            if (!recorrencia) {
+                mostrarToast(
+                    'Recorrência não encontrada.',
+                    'erro'
+                );
+
+                return;
+            }
+            if (acao === 'editar') {
+    abrirEdicaoRecorrencia(recorrencia);
+    return;
+}
+
+            if (acao === 'pausar') {
+                recorrencia.status = 'pausada';
+                recorrencia.atualizadaEm =
+                    new Date().toISOString();
+
+                salvarNoBanco();
+                renderizarTela();
+
+                mostrarToast(
+                    'Recorrência pausada.',
+                    'info'
+                );
+
+                return;
+            }
+
+if (acao === 'reativar') {
+    abrirModalReativacao(recorrencia);
+    return;
+}
+    
+
+            if (acao === 'encerrar') {
+                const confirmou = confirm(
+                    `Encerrar a recorrência "${recorrencia.descricao}"? Os lançamentos anteriores serão preservados.`
+                );
+
+                if (!confirmou) {
+                    return;
+                }
+
+                recorrencia.status = 'encerrada';
+                recorrencia.atualizadaEm =
+                    new Date().toISOString();
+
+                salvarNoBanco();
+                renderizarTela();
+
+                mostrarToast(
+                    'Recorrência encerrada. O histórico foi preservado.',
+                    'sucesso'
+                );
+            }
+        }
+    );
+}
