@@ -1,8 +1,4 @@
-/* =========================================================
-   DOURADO FINANÇAS — STYLE.CSS COMPLETO
-   Tema: dark premium mais claro, limpo e intuitivo
-   Compatível com o HTML atual, sem alterar o JavaScript.
-========================================================= */
+
 
 /* =========================================================
    1. VARIÁVEIS DO DESIGN
@@ -2288,6 +2284,15 @@ td.amount-neg {
     white-space: nowrap;
 }
 
+.history-category-name {
+    display: block;
+    margin-top: 0.2rem;
+
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 650;
+}
+
 .category-label {
     display: inline-flex;
     align-items: center;
@@ -2503,4 +2508,71 @@ td.amount-neg {
     color: var(--text-muted);
     font-size: 0.68rem;
     line-height: 1.4;
+}
+.competencia-painel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.competencia-painel h2 {
+    margin-top: 0.2rem;
+
+    color: var(--text);
+    font-size: 1rem;
+}
+
+.competencia-controles {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.competencia-controles input,
+.competencia-controles button {
+    min-height: 40px;
+    padding: 0.55rem 0.75rem;
+
+    color: var(--text);
+    font-weight: 750;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.competencia-controles button {
+    cursor: pointer;
+}
+
+.competencia-controles button:hover {
+    border-color: rgba(217, 173, 38, 0.32);
+    background: rgba(217, 173, 38, 0.08);
+}
+
+@media (max-width: 600px) {
+    .competencia-painel {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .competencia-controles {
+        width: 100%;
+    }
+
+    .competencia-controles input {
+        flex: 1;
+        min-width: 0;
+    }
 }

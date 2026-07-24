@@ -52,6 +52,173 @@ const recorrenciasSalvas = lerJSONLocalStorage(
     []
 );
 
+const categoriasSalvas = lerJSONLocalStorage(
+    'dourado_categorias',
+    null
+);
+
+const categoriasPadrao = [
+    {
+        id: 'receita-salario',
+        nome: 'Salário',
+        tipo: 'salario',
+        categoriaPaiId: null,
+        icone: 'money-bill-wave',
+        cor: '#4f97ff'
+    },
+    {
+        id: 'receita-extra',
+        nome: 'Renda extra',
+        tipo: 'salario',
+        categoriaPaiId: null,
+        icone: 'coins',
+        cor: '#31cc70'
+    },
+    {
+        id: 'fixo-moradia',
+        nome: 'Moradia',
+        tipo: 'fixo',
+        categoriaPaiId: null,
+        icone: 'house',
+        cor: '#ffad19'
+    },
+    {
+        id: 'fixo-contas',
+        nome: 'Contas',
+        tipo: 'fixo',
+        categoriaPaiId: null,
+        icone: 'file-invoice-dollar',
+        cor: '#4f97ff'
+    },
+    {
+        id: 'fixo-assinaturas',
+        nome: 'Assinaturas',
+        tipo: 'fixo',
+        categoriaPaiId: null,
+        icone: 'repeat',
+        cor: '#9b7cff'
+    },
+    {
+        id: 'fixo-saude',
+        nome: 'Saúde',
+        tipo: 'fixo',
+        categoriaPaiId: null,
+        icone: 'heart-pulse',
+        cor: '#ff5b5b'
+    },
+    {
+        id: 'fixo-educacao',
+        nome: 'Educação',
+        tipo: 'fixo',
+        categoriaPaiId: null,
+        icone: 'graduation-cap',
+        cor: '#9b7cff'
+    },
+    {
+        id: 'variavel-alimentacao',
+        nome: 'Alimentação',
+        tipo: 'variavel',
+        categoriaPaiId: null,
+        icone: 'utensils',
+        cor: '#ffad19'
+    },
+    {
+        id: 'variavel-mercado',
+        nome: 'Mercado',
+        tipo: 'variavel',
+        categoriaPaiId: null,
+        icone: 'basket-shopping',
+        cor: '#31cc70'
+    },
+    {
+        id: 'variavel-transporte',
+        nome: 'Transporte',
+        tipo: 'variavel',
+        categoriaPaiId: null,
+        icone: 'car',
+        cor: '#4f97ff'
+    },
+    {
+        id: 'variavel-lazer',
+        nome: 'Lazer',
+        tipo: 'variavel',
+        categoriaPaiId: null,
+        icone: 'gamepad',
+        cor: '#9b7cff'
+    },
+    {
+        id: 'variavel-compras',
+        nome: 'Compras',
+        tipo: 'variavel',
+        categoriaPaiId: null,
+        icone: 'bag-shopping',
+        cor: '#ff5b5b'
+    },
+    {
+        id: 'variavel-outros',
+        nome: 'Outros',
+        tipo: 'variavel',
+        categoriaPaiId: null,
+        icone: 'ellipsis',
+        cor: '#8f99a8'
+    }
+];
+
+function normalizarCategoria(categoria, indice) {
+    const dados =
+        categoria && typeof categoria === 'object'
+            ? categoria
+            : {};
+
+    const tiposPermitidos = [
+        'salario',
+        'fixo',
+        'variavel'
+    ];
+
+    return {
+        id: String(
+            dados.id ||
+            `categoria-${Date.now()}-${indice}`
+        ),
+        nome: String(
+            dados.nome || 'Nova categoria'
+        ).trim(),
+        tipo: tiposPermitidos.includes(dados.tipo)
+            ? dados.tipo
+            : 'variavel',
+        categoriaPaiId:
+            dados.categoriaPaiId === null ||
+            dados.categoriaPaiId === undefined
+                ? null
+                : String(dados.categoriaPaiId),
+        icone: String(
+            dados.icone || 'tag'
+        ),
+        cor: String(
+            dados.cor || '#8f99a8'
+        ),
+        ativa: dados.ativa !== false,
+        sistema: dados.sistema === true,
+        criadaEm:
+            dados.criadaEm ||
+            new Date().toISOString(),
+        atualizadaEm:
+            dados.atualizadaEm ||
+            dados.criadaEm ||
+            new Date().toISOString()
+    };
+}
+
+let categorias = (
+    Array.isArray(categoriasSalvas)
+        ? categoriasSalvas
+        : categoriasPadrao.map(categoria => ({
+            ...categoria,
+            sistema: true
+        }))
+).map(normalizarCategoria);
+
 const caixinhasPadrao = [
     {
         id: 1,
@@ -257,6 +424,12 @@ function normalizarRecorrencia(recorrencia, indice) {
 
         tipoLancamento,
 
+        categoriaId:
+            dados.categoriaId === null ||
+            dados.categoriaId === undefined
+                ? null
+                : String(dados.categoriaId),
+
         pagamento: dados.pagamento || '',
 
         caixinhaId:
@@ -301,5 +474,10 @@ function salvarNoBanco() {
     localStorage.setItem(
         'dourado_recorrencias',
         JSON.stringify(recorrencias)
+    );
+
+    localStorage.setItem(
+        'dourado_categorias',
+        JSON.stringify(categorias)
     );
 }

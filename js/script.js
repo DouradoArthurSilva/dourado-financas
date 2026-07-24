@@ -81,14 +81,26 @@ if (recorrenciasGeradas > 0) {
     // ==========================================
 const elementos = {
     recorrenciasLista: document.getElementById(
-    'recorrenciasLista'
-),
+        'recorrenciasLista'
+    ),
 
-recorrenciasVazio: document.getElementById(
-    'recorrenciasVazio'
-),
+    competenciaPainel: document.getElementById(
+        'competenciaPainel'
+    ),
 
-totalRecorrenciasAtivas: document.getElementById(
+    tituloCompetenciaPainel: document.getElementById(
+        'tituloCompetenciaPainel'
+    ),
+
+    btnMesAtual: document.getElementById(
+        'btnMesAtual'
+    ),
+
+    recorrenciasVazio: document.getElementById(
+        'recorrenciasVazio'
+    ),
+
+  totalRecorrenciasAtivas: document.getElementById(
     'totalRecorrenciasAtivas'
 ),
 
@@ -163,7 +175,48 @@ const estadoHistorico = {
     pesquisa: '',
     mes: 'todos',
     ordenacao: 'recentes'
-};const ICONES_CAIXINHA = {
+};
+
+let competenciaPainelSelecionada =
+    obterCompetenciaAtual();
+
+function obterCompetenciaTransacao(transacao) {
+    return (
+        normalizarCompetencia(
+            transacao.competencia
+        ) ||
+        obterChaveMes(transacao.data)
+    );
+}
+
+function formatarTituloCompetencia(
+    competencia
+) {
+    const [ano, mes] = competencia
+        .split('-')
+        .map(Number);
+
+    if (!ano || !mes) {
+        return 'Visão mensal';
+    }
+
+    const nomeMes = new Intl.DateTimeFormat(
+        'pt-BR',
+        {
+            month: 'long',
+            year: 'numeric'
+        }
+    ).format(
+        new Date(ano, mes - 1, 1)
+    );
+
+    return (
+        nomeMes.charAt(0).toUpperCase() +
+        nomeMes.slice(1)
+    );
+}
+
+const ICONES_CAIXINHA = {
     'piggy-bank': 'fa-piggy-bank',
     'shield-heart': 'fa-shield-heart',
     'rings-wedding': 'fa-ring',
@@ -306,7 +359,7 @@ function gerarIdUnico() {
             const combinaMes = estadoHistorico.mes === 'todos' ||
                 obterChaveMes(transacao.data) === estadoHistorico.mes;
 
-            const textoPesquisavel = `${transacao.descricao || ''} ${transacao.categoriaText || ''}`
+            const textoPesquisavel = `${transacao.descricao || ''} ${transacao.categoriaText || ''} ${transacao.categoriaNome || ''}`
                 .toLocaleLowerCase('pt-BR');
 
             const combinaPesquisa = pesquisa === '' || textoPesquisavel.includes(pesquisa);
@@ -396,6 +449,11 @@ function gerarIdUnico() {
                 <td>${escaparHTML(transacao.data)}</td>
                 <td>
                     <div class="history-description">${escaparHTML(transacao.descricao)}</div>
+                    ${
+                        transacao.categoriaNome
+                            ? `<small class="history-category-name">${escaparHTML(transacao.categoriaNome)}</small>`
+                            : ''
+                    }
                 </td>
                 <td><span class="category-label category-${escaparHTML(transacao.tipo)}">${escaparHTML(transacao.categoriaText)}</span></td>
                 <td>${statusHTML}</td>
@@ -859,37 +917,77 @@ function renderizarRecorrencias() {
 }
     function renderizarTela() {
         renderizarRecorrencias();
+        if (elementos.competenciaPainel) {
+    elementos.competenciaPainel.value =
+        competenciaPainelSelecionada;
+}
+
+if (elementos.tituloCompetenciaPainel) {
+    elementos.tituloCompetenciaPainel.textContent =
+        formatarTituloCompetencia(
+            competenciaPainelSelecionada
+        );
+}
         estado.totalSalario = 0;
         estado.totalGuardado = 0;
         estado.totalFixo = 0;
         estado.totalVariavel = 0;
 
         const saldosCaixinhas = {};
-        caixinhas.forEach(caixinha => {
-            saldosCaixinhas[caixinha.id] = 0;
-        });
 
-        transacoes.forEach(transacao => {
-            if (transacao.tipo === 'salario') {
-                estado.totalSalario += transacao.valor;
-            } else if (transacao.tipo === 'guardado') {
-                estado.totalGuardado += transacao.valor;
+caixinhas.forEach(caixinha => {
+    saldosCaixinhas[caixinha.id] = 0;
+});
 
-                if (saldosCaixinhas[transacao.caixinhaId] !== undefined) {
-                    saldosCaixinhas[transacao.caixinhaId] += transacao.valor;
-                }
-            } else if (transacao.tipo === 'resgate') {
-                estado.totalGuardado -= transacao.valor;
+// O saldo das caixinhas é acumulado.
+// Ele não deve reiniciar quando o mês do painel muda.
+transacoes.forEach(transacao => {
+    const caixinhaId =
+        transacao.caixinhaId;
 
-                if (saldosCaixinhas[transacao.caixinhaId] !== undefined) {
-                    saldosCaixinhas[transacao.caixinhaId] -= transacao.valor;
-                }
-            } else if (transacao.tipo === 'fixo') {
-                estado.totalFixo += transacao.valor;
-            } else if (transacao.tipo === 'variavel') {
-                estado.totalVariavel += transacao.valor;
-            }
-        });
+    if (
+        saldosCaixinhas[caixinhaId] ===
+        undefined
+    ) {
+        return;
+    }
+
+    if (transacao.tipo === 'guardado') {
+        saldosCaixinhas[caixinhaId] +=
+            Number(transacao.valor) || 0;
+    }
+
+    if (transacao.tipo === 'resgate') {
+        saldosCaixinhas[caixinhaId] -=
+            Number(transacao.valor) || 0;
+    }
+});
+
+const transacoesDaCompetencia =
+    transacoes.filter(transacao => {
+        return (
+            obterCompetenciaTransacao(
+                transacao
+            ) === competenciaPainelSelecionada
+        );
+    });
+
+// Os cards financeiros representam somente o mês selecionado.
+transacoesDaCompetencia.forEach(transacao => {
+    const valor = Number(transacao.valor) || 0;
+
+    if (transacao.tipo === 'salario') {
+        estado.totalSalario += valor;
+    } else if (transacao.tipo === 'guardado') {
+        estado.totalGuardado += valor;
+    } else if (transacao.tipo === 'resgate') {
+        estado.totalGuardado -= valor;
+    } else if (transacao.tipo === 'fixo') {
+        estado.totalFixo += valor;
+    } else if (transacao.tipo === 'variavel') {
+        estado.totalVariavel += valor;
+    }
+});
 
         estado.sobraTotal =
             estado.totalSalario -
@@ -1613,6 +1711,64 @@ const tipoLancamento = document.getElementById(
 const areaCaixinha = document.getElementById(
     'areaCaixinha'
 );
+
+const areaCategoria = document.getElementById(
+    'areaCategoria'
+);
+
+const categoriaLancamento = document.getElementById(
+    'categoriaLancamento'
+);
+
+function obterCategoriasAtivasPorTipo(tipo) {
+    return categorias.filter(categoria => {
+        return (
+            categoria.ativa &&
+            categoria.tipo === tipo &&
+            categoria.categoriaPaiId === null
+        );
+    });
+}
+
+function obterCategoriaPorId(categoriaId) {
+    return categorias.find(categoria => {
+        return String(categoria.id) ===
+            String(categoriaId);
+    }) || null;
+}
+
+function preencherSeletorCategorias(
+    seletor,
+    tipo,
+    categoriaSelecionadaId = null
+) {
+    seletor.innerHTML = '';
+
+    const categoriasDisponiveis =
+        obterCategoriasAtivasPorTipo(tipo);
+
+    categoriasDisponiveis.forEach(categoria => {
+        const opcao =
+            document.createElement('option');
+
+        opcao.value = categoria.id;
+        opcao.textContent = categoria.nome;
+
+        seletor.appendChild(opcao);
+    });
+
+    const categoriaSelecionadaExiste =
+        categoriasDisponiveis.some(categoria => {
+            return String(categoria.id) ===
+                String(categoriaSelecionadaId);
+        });
+
+    if (categoriaSelecionadaExiste) {
+        seletor.value =
+            String(categoriaSelecionadaId);
+    }
+}
+
 const areaRecorrencia = document.getElementById(
     'areaRecorrencia'
 );
@@ -1794,6 +1950,22 @@ const permiteRecorrencia = [
     'variavel'
 ].includes(tipo);
 
+const permiteCategoria = [
+    'salario',
+    'fixo',
+    'variavel'
+].includes(tipo);
+
+areaCategoria.style.display =
+    permiteCategoria ? 'block' : 'none';
+
+if (permiteCategoria) {
+    preencherSeletorCategorias(
+        categoriaLancamento,
+        tipo
+    );
+}
+
 areaRecorrencia.style.display =
     permiteRecorrencia ? 'block' : 'none';
    
@@ -1833,7 +2005,6 @@ btnCancelarLancamento.addEventListener(
     document.querySelector('.btn-saved').addEventListener('click', () => abrirModal('guardado', 'Guardar Dinheiro'));
     document.querySelector('.btn-fixed').addEventListener('click', () => abrirModal('fixo', 'Adicionar Gasto Fixo'));
     document.querySelector('.btn-variable').addEventListener('click', () => abrirModal('variavel', 'Adicionar Gasto Variável'));
-    // Atualizei os dois botões de resgate para abrirem o mesmo tipo de modal agora, já que a caixinha é escolhida na lista
     document.querySelector('.btn-rescue').addEventListener('click', () => abrirModal('resgate', 'Resgatar Dinheiro')); 
     document.querySelector('.btn-travel').addEventListener('click', () => abrirModal('resgate', 'Usar Lazer/Casa')); 
     
@@ -1881,12 +2052,44 @@ document
             ).value
         );
 
+        const permiteCategoria = [
+            'salario',
+            'fixo',
+            'variavel'
+        ].includes(tipo);
+
+        const categoriaId = permiteCategoria
+            ? categoriaLancamento.value
+            : null;
+
+        const categoriaSelecionada =
+            permiteCategoria
+                ? obterCategoriaPorId(categoriaId)
+                : null;
+
         if (!descricao || !Number.isFinite(valor) || valor <= 0) {
             mostrarToast(
                 'Preencha a descrição e informe um valor válido.',
                 'aviso'
             );
 
+            return;
+        }
+
+        if (
+            permiteCategoria &&
+            (
+                !categoriaSelecionada ||
+                !categoriaSelecionada.ativa ||
+                categoriaSelecionada.tipo !== tipo
+            )
+        ) {
+            mostrarToast(
+                'Selecione uma categoria válida.',
+                'aviso'
+            );
+
+            categoriaLancamento.focus();
             return;
         }
 
@@ -2083,6 +2286,7 @@ document
                 descricao,
                 valor,
                 tipoLancamento: tipo,
+                categoriaId,
                 pagamento: '',
                 caixinhaId: null,
                 diaVencimento,
@@ -2129,6 +2333,11 @@ document
                 ? 'recorrencia'
                 : 'manual',
             categoriaText,
+            categoriaId,
+            categoriaNome:
+                categoriaSelecionada
+                    ? categoriaSelecionada.nome
+                    : '',
             classeCor,
             sinal,
             isPago:
@@ -2378,6 +2587,10 @@ function criarTransacaoDaRecorrencia(
         return false;
     }
 
+    const categoria = obterCategoriaPorId(
+        recorrencia.categoriaId
+    );
+
     transacoes.push({
         id: gerarIdUnico(),
 
@@ -2401,6 +2614,12 @@ function criarTransacaoDaRecorrencia(
 
         categoriaText:
             dadosVisuais.categoriaText,
+
+        categoriaId:
+            recorrencia.categoriaId || null,
+
+        categoriaNome:
+            categoria ? categoria.nome : '',
 
         classeCor:
             dadosVisuais.classeCor,
@@ -2658,6 +2877,11 @@ const tipoEdicaoRecorrencia =
         'tipoEdicaoRecorrencia'
     );
 
+const categoriaEdicaoRecorrencia =
+    document.getElementById(
+        'categoriaEdicaoRecorrencia'
+    );
+
 const diaEdicaoRecorrencia =
     document.getElementById(
         'diaEdicaoRecorrencia'
@@ -2716,6 +2940,12 @@ function abrirEdicaoRecorrencia(recorrencia) {
 
     tipoEdicaoRecorrencia.value =
         recorrencia.tipoLancamento;
+
+    preencherSeletorCategorias(
+        categoriaEdicaoRecorrencia,
+        recorrencia.tipoLancamento,
+        recorrencia.categoriaId
+    );
 
     diaEdicaoRecorrencia.value =
         recorrencia.diaVencimento;
@@ -2798,6 +3028,12 @@ function salvarEdicaoRecorrencia() {
     const tipo =
         tipoEdicaoRecorrencia.value;
 
+    const categoriaId =
+        categoriaEdicaoRecorrencia.value;
+
+    const categoriaSelecionada =
+        obterCategoriaPorId(categoriaId);
+
     const dia = Number(
         diaEdicaoRecorrencia.value
     );
@@ -2812,6 +3048,20 @@ function salvarEdicaoRecorrencia() {
         );
 
         descricaoEdicaoRecorrencia.focus();
+        return;
+    }
+
+    if (
+        !categoriaSelecionada ||
+        !categoriaSelecionada.ativa ||
+        categoriaSelecionada.tipo !== tipo
+    ) {
+        mostrarToast(
+            'Selecione uma categoria válida.',
+            'aviso'
+        );
+
+        categoriaEdicaoRecorrencia.focus();
         return;
     }
 
@@ -2923,6 +3173,7 @@ function salvarEdicaoRecorrencia() {
     recorrencia.descricao = descricao;
     recorrencia.valor = valor;
     recorrencia.tipoLancamento = tipo;
+    recorrencia.categoriaId = categoriaId;
     recorrencia.diaVencimento = dia;
     recorrencia.termino = termino;
     recorrencia.atualizadaEm =
@@ -2941,6 +3192,16 @@ function salvarEdicaoRecorrencia() {
 terminoEdicaoRecorrencia.addEventListener(
     'change',
     atualizarTerminoEdicaoRecorrencia
+);
+
+tipoEdicaoRecorrencia.addEventListener(
+    'change',
+    () => {
+        preencherSeletorCategorias(
+            categoriaEdicaoRecorrencia,
+            tipoEdicaoRecorrencia.value
+        );
+    }
 );
 
 document
@@ -3074,6 +3335,44 @@ if (acao === 'reativar') {
                     'sucesso'
                 );
             }
+        }
+    );
+}
+if (elementos.competenciaPainel) {
+    elementos.competenciaPainel.value =
+        competenciaPainelSelecionada;
+
+    elementos.competenciaPainel.addEventListener(
+        'change',
+        evento => {
+            const competencia =
+                normalizarCompetencia(
+                    evento.target.value
+                );
+
+            if (!competencia) {
+                evento.target.value =
+                    competenciaPainelSelecionada;
+
+                return;
+            }
+
+            competenciaPainelSelecionada =
+                competencia;
+
+            renderizarTela();
+        }
+    );
+}
+
+if (elementos.btnMesAtual) {
+    elementos.btnMesAtual.addEventListener(
+        'click',
+        () => {
+            competenciaPainelSelecionada =
+                obterCompetenciaAtual();
+
+            renderizarTela();
         }
     );
 }
