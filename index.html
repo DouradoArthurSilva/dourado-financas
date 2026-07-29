@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Dourado Finanças — controle financeiro pessoal simples, rápido e visual.">
     <title>Minhas Finanças - Painel</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23d9ad26'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle' fill='%23172031' font-family='Arial' font-weight='bold'%3E%24%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -117,6 +119,45 @@
     </button>
 
 </div>
+<nav class="app-navigation" id="appNavigation" aria-label="Áreas do sistema">
+    <button type="button" class="app-nav-item active" data-app-target="visao-geral">
+        <i class="fa-solid fa-house"></i>
+        <span>Visão geral</span>
+    </button>
+    <button type="button" class="app-nav-item" data-app-target="lancamentos">
+        <i class="fa-solid fa-receipt"></i>
+        <span>Lançamentos</span>
+    </button>
+    <button type="button" class="app-nav-item" data-app-target="contas">
+        <i class="fa-solid fa-building-columns"></i>
+        <span>Contas</span>
+    </button>
+    <button type="button" class="app-nav-item" data-app-target="cartoes">
+        <i class="fa-solid fa-credit-card"></i>
+        <span>Cartões</span>
+    </button>
+    <button type="button" class="app-nav-item" data-app-target="planejamento">
+        <i class="fa-solid fa-bullseye"></i>
+        <span>Planejamento</span>
+    </button>
+    <button type="button" class="app-nav-item" data-app-target="categorias">
+        <i class="fa-solid fa-tags"></i>
+        <span>Categorias</span>
+    </button>
+    <button type="button" class="app-nav-item" data-app-target="relatorios">
+        <i class="fa-solid fa-chart-pie"></i>
+        <span>Relatórios</span>
+    </button>
+</nav>
+
+<section class="area-atual-cabecalho">
+    <div>
+        <span class="section-kicker">Dourado Finanças</span>
+        <h2 id="tituloAreaAtual">Visão geral</h2>
+        <p id="descricaoAreaAtual">Resumo financeiro do período selecionado.</p>
+    </div>
+</section>
+
 <section class="competencia-painel">
     <div>
         <span class="section-kicker">
@@ -145,7 +186,7 @@
 </section>
         <div class="dashboard-row">
             
-            <section class="overview-section">
+            <section class="overview-section app-view-section" data-app-view="visao-geral">
                 <h2 class="section-title">Visão Geral</h2>
                 <div class="cards-grid-compact">
                     <!-- Adicionado clickable-card e data-filter="entradas" -->
@@ -187,16 +228,164 @@
                    
             </section>
 
-            <section class="chart-section">
+            <section class="cartoes-section app-view-section" data-app-view="cartoes" hidden>
+                <div class="section-header">
+                    <div>
+                        <span class="section-kicker">Crédito</span>
+                        <h2>Cartões e faturas</h2>
+                        <p>Controle limites, parcelas e pagamentos sem misturar com o saldo das contas.</p>
+                    </div>
+
+                    <div class="contas-header-acoes">
+                        <button type="button" class="btn-conta-secundario" id="btnNovaCompraCartao">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                            Nova compra
+                        </button>
+
+                        <button type="button" class="btn-nova-categoria" id="btnNovoCartao">
+                            <i class="fa-solid fa-plus"></i>
+                            Novo cartão
+                        </button>
+                    </div>
+                </div>
+
+                <div class="contas-resumo">
+                    <span>Gerencie cartões ativos e arquivados</span>
+                    <select id="filtroCartoes" class="filtro-gerenciamento" aria-label="Filtrar cartões">
+                        <option value="ativos">Ativos</option>
+                        <option value="arquivados">Arquivados</option>
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+
+                <div class="cartoes-grid" id="cartoesGrid"></div>
+                <div class="gerenciamento-vazio" id="cartoesVazio" hidden>
+                    Nenhum cartão neste filtro.
+                </div>
+
+                <div class="fatura-painel">
+                    <div class="fatura-cabecalho">
+                        <div>
+                            <span class="section-kicker">Fatura mensal</span>
+                            <h3 id="tituloFatura">Selecione um cartão</h3>
+                        </div>
+
+                        <div class="fatura-controles">
+                            <select id="cartaoFaturaSelecionado" aria-label="Selecionar cartão"></select>
+                            <input type="month" id="competenciaFatura" aria-label="Selecionar mês da fatura">
+                        </div>
+                    </div>
+
+                    <div class="fatura-resumo">
+                        <article><span>Total da fatura</span><strong id="totalFatura">R$ 0,00</strong></article>
+                        <article><span>Gastos fixos</span><strong id="totalFaturaFixo">R$ 0,00</strong></article>
+                        <article><span>Gastos variáveis</span><strong id="totalFaturaVariavel">R$ 0,00</strong></article>
+                        <article><span>Fechamento</span><strong id="fechamentoFatura">--</strong></article>
+                        <article><span>Vencimento</span><strong id="vencimentoFatura">--</strong></article>
+                        <article><span>Status</span><strong id="statusFatura">Em aberto</strong></article>
+                    </div>
+
+                    <div class="fatura-lista-cabecalho">
+                        <span>Compras da fatura</span>
+                        <strong id="quantidadeComprasFatura">0 compras</strong>
+                    </div>
+                    <div class="fatura-lista" id="faturaLista"></div>
+
+                    <button type="button" class="btn-pagar-fatura" id="btnPagarFatura">
+                        <i class="fa-solid fa-check"></i>
+                        Pagar fatura
+                    </button>
+                </div>
+            </section>
+
+            <section class="contas-section app-view-section" data-app-view="contas" hidden>
+                <div class="section-header">
+                    <div>
+                        <span class="section-kicker">Patrimônio</span>
+                        <h2>Minhas contas</h2>
+                        <p>Acompanhe onde seu dinheiro está e transfira valores com segurança.</p>
+                    </div>
+
+                    <div class="contas-header-acoes">
+                        <button type="button" class="btn-conta-secundario" id="btnNovaTransferencia">
+                            <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                            Transferir
+                        </button>
+
+                        <button type="button" class="btn-nova-categoria" id="btnNovaConta">
+                            <i class="fa-solid fa-plus"></i>
+                            Nova conta
+                        </button>
+                    </div>
+                </div>
+
+                <div class="contas-resumo">
+                    <span>Saldo total <strong id="saldoTotalContas">R$ 0,00</strong></span>
+
+                    <select id="filtroContas" class="filtro-gerenciamento" aria-label="Filtrar contas">
+                        <option value="ativas">Ativas</option>
+                        <option value="arquivadas">Arquivadas</option>
+                        <option value="todas">Todas</option>
+                    </select>
+                </div>
+
+                <div class="contas-grid" id="contasGrid"></div>
+                <div class="gerenciamento-vazio" id="contasVazio" hidden>
+                    Nenhuma conta neste filtro.
+                </div>
+            </section>
+
+            <section class="chart-section app-view-section" data-app-view="visao-geral">
                 <h2 class="section-title" style="margin-bottom: 0;">Análise de Gastos</h2>
                 <div class="chart-container">
                     <canvas id="graficoResumo"></canvas>
                 </div>
             </section>
+
+            <section class="relatorio-categorias-section app-view-section" data-app-view="relatorios" aria-labelledby="tituloRelatorioCategorias" hidden>
+                <div class="relatorio-categorias-header">
+                    <div>
+                        <span class="section-kicker">Relatório mensal</span>
+                        <h2 id="tituloRelatorioCategorias">Gastos por categoria</h2>
+                        <p id="periodoRelatorioCategorias">Distribuição do mês selecionado no painel.</p>
+                    </div>
+                </div>
+
+                <div class="relatorio-categorias-resumo">
+                    <article>
+                        <span>Total em gastos</span>
+                        <strong id="totalGastosCategorias">R$ 0,00</strong>
+                    </article>
+
+                    <article>
+                        <span>Categorias utilizadas</span>
+                        <strong id="quantidadeCategoriasUtilizadas">0</strong>
+                    </article>
+
+                    <article>
+                        <span>Maior gasto</span>
+                        <strong id="maiorCategoriaGasto">Nenhum</strong>
+                    </article>
+                </div>
+
+                <div class="relatorio-categorias-conteudo">
+                    <div class="grafico-categorias-wrapper">
+                        <canvas id="graficoCategorias"></canvas>
+
+                        <div class="relatorio-categorias-vazio" id="relatorioCategoriasVazio" hidden>
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <strong>Nenhum gasto neste mês</strong>
+                            <span>Registre gastos fixos ou variáveis para visualizar a distribuição.</span>
+                        </div>
+                    </div>
+
+                    <div class="ranking-categorias" id="rankingCategorias"></div>
+                </div>
+            </section>
             
         </div>
       <!-- CAIXINHAS DE OBJETIVOS (NOVO SISTEMA) -->
-       <section class="caixinhas-container">
+       <section class="caixinhas-container app-view-section" data-app-view="planejamento" hidden>
     <div class="caixinhas-header">
         <h2 class="section-title" style="margin-top: 0; border-left-color: #d4af37;">Meus Objetivos (Caixinhas)</h2>
         <button class="btn-nova-caixinha" id="btnNovaCaixinha">+ Novo Objetivo</button>
@@ -206,8 +395,41 @@
 </section>
 
 
-        <h2 class="section-title" id="tituloHistorico">Histórico de Lançamentos</h2>
-        <section class="recorrencias-section">
+        <h2 class="section-title app-view-section" data-app-view="lancamentos" id="tituloHistorico" hidden>Histórico de Lançamentos</h2>
+        <section class="categorias-section app-view-section" data-app-view="categorias" hidden>
+            <div class="section-header">
+                <div>
+                    <span class="section-kicker">Organização</span>
+                    <h2>Categorias</h2>
+                    <p>Organize receitas e despesas sem alterar o histórico.</p>
+                </div>
+
+                <button type="button" class="btn-nova-categoria" id="btnNovaCategoria">
+                    <i class="fa-solid fa-plus"></i>
+                    Nova categoria
+                </button>
+            </div>
+
+            <div class="categorias-resumo">
+                <span><strong id="totalCategoriasAtivas">0</strong> ativas</span>
+                <span><strong id="totalCategoriasInativas">0</strong> inativas</span>
+                <span><strong id="totalCategoriasArquivadas">0</strong> arquivadas</span>
+
+                <select id="filtroCategorias" class="filtro-gerenciamento" aria-label="Filtrar categorias">
+                    <option value="ativas">Ativas</option>
+                    <option value="inativas">Inativas</option>
+                    <option value="arquivadas">Arquivadas</option>
+                    <option value="todas">Todas</option>
+                </select>
+            </div>
+
+            <div class="categorias-lista" id="categoriasLista"></div>
+            <div class="gerenciamento-vazio" id="categoriasVazio" hidden>
+                Nenhuma categoria neste filtro.
+            </div>
+        </section>
+
+        <section class="recorrencias-section app-view-section" data-app-view="planejamento" hidden>
     <div class="section-header">
         <div>
             <span class="section-kicker">
@@ -240,6 +462,18 @@
             <strong id="totalRecorrenciasEncerradas">0</strong>
             encerradas
         </span>
+
+        <span>
+            <strong id="totalRecorrenciasArquivadas">0</strong>
+            arquivadas
+        </span>
+
+        <select id="filtroRecorrencias" class="filtro-gerenciamento" aria-label="Filtrar recorrências">
+            <option value="atuais">Ativas e pausadas</option>
+            <option value="encerradas">Encerradas</option>
+            <option value="arquivadas">Arquivadas</option>
+            <option value="todas">Todas</option>
+        </select>
     </div>
 
     <div
@@ -261,7 +495,7 @@
         </p>
     </div>
 </section>
-        <section class="history-section" id="historicoLancamentos">
+        <section class="history-section app-view-section" data-app-view="lancamentos" id="historicoLancamentos" hidden>
             <div class="history-toolbar">
                 <div class="history-search">
                     <i class="fa-solid fa-magnifying-glass"></i>
@@ -274,6 +508,10 @@
                 </div>
 
                 <div class="history-selectors">
+                    <select id="categoriaHistorico" aria-label="Filtrar por categoria">
+                        <option value="todas">Todas as categorias</option>
+                    </select>
+
                     <select id="mesHistorico" aria-label="Selecionar mês">
                         <option value="todos">Todos os meses</option>
                     </select>
@@ -328,6 +566,99 @@
         </section>
 
     </main>
+<!-- MODAL DE CRIAÇÃO E EDIÇÃO DE CATEGORIA -->
+<div class="modal-overlay" id="modalCategoria" aria-hidden="true">
+    <div
+        class="modal-content modal-categoria-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloModalCategoria"
+    >
+        <button type="button" class="modal-close" id="btnFecharModalCategoria" aria-label="Fechar">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <h3 id="tituloModalCategoria">Nova categoria</h3>
+
+        <p class="modal-categoria-aviso">
+            Categorias usadas em lançamentos não são apagadas; podem ser desativadas com segurança.
+        </p>
+
+        <input type="hidden" id="categoriaEmEdicaoId">
+
+        <div class="form-group">
+            <label for="nomeCategoria">Nome</label>
+            <input
+                type="text"
+                id="nomeCategoria"
+                maxlength="40"
+                autocomplete="off"
+                placeholder="Ex: Pets, Viagens ou Cursos"
+            >
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="tipoCategoria">Tipo</label>
+                <select id="tipoCategoria">
+                    <option value="salario">Receita</option>
+                    <option value="fixo">Gasto fixo</option>
+                    <option value="variavel">Gasto variável</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="categoriaPai">Categoria principal</label>
+                <select id="categoriaPai">
+                    <option value="">Nenhuma</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="iconeCategoria">Ícone</label>
+                <select id="iconeCategoria">
+                    <option value="tag">Etiqueta</option>
+                    <option value="house">Casa</option>
+                    <option value="car">Carro</option>
+                    <option value="utensils">Alimentação</option>
+                    <option value="heart-pulse">Saúde</option>
+                    <option value="graduation-cap">Educação</option>
+                    <option value="paw">Pets</option>
+                    <option value="plane">Viagem</option>
+                    <option value="gamepad">Lazer</option>
+                    <option value="bag-shopping">Compras</option>
+                    <option value="coins">Renda</option>
+                    <option value="money-bill-wave">Salário</option>
+                    <option value="file-invoice-dollar">Contas</option>
+                    <option value="repeat">Assinaturas</option>
+                    <option value="basket-shopping">Mercado</option>
+                    <option value="ellipsis">Outros</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="corCategoria">Cor</label>
+                <select id="corCategoria">
+                    <option value="#d9ad26">Dourado</option>
+                    <option value="#4f97ff">Azul</option>
+                    <option value="#31cc70">Verde</option>
+                    <option value="#9b7cff">Roxo</option>
+                    <option value="#ffad19">Laranja</option>
+                    <option value="#ff5b5b">Vermelho</option>
+                    <option value="#8f99a8">Cinza</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="btnCancelarCategoria">Cancelar</button>
+            <button type="button" class="btn-save" id="btnSalvarCategoria">Salvar categoria</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL DE CRIAÇÃO E EDIÇÃO DE CAIXINHA -->
 <div
     class="modal-overlay modal-caixinha-overlay"
@@ -734,6 +1065,11 @@
         </div>
 
         <div class="form-group">
+            <label for="contaEdicaoRecorrencia">Conta</label>
+            <select id="contaEdicaoRecorrencia"></select>
+        </div>
+
+        <div class="form-group">
             <label for="inicioEdicaoRecorrencia">
                 Competência inicial
             </label>
@@ -821,6 +1157,196 @@
         </div>
     </div>
 </div>
+<!-- MODAL DE CARTÃO -->
+<div class="modal-overlay" id="modalCartao" aria-hidden="true">
+    <div class="modal-content modal-conta-content" role="dialog" aria-modal="true">
+        <button type="button" class="modal-close" id="btnFecharModalCartao" aria-label="Fechar">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <h3 id="tituloModalCartao">Novo cartão</h3>
+        <input type="hidden" id="cartaoEmEdicaoId">
+
+        <div class="form-group">
+            <label for="nomeCartao">Nome do cartão</label>
+            <input type="text" id="nomeCartao" maxlength="40" placeholder="Ex: Nubank, Inter ou Visa">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="bandeiraCartao">Bandeira</label>
+                <select id="bandeiraCartao">
+                    <option value="mastercard">Mastercard</option>
+                    <option value="visa">Visa</option>
+                    <option value="elo">Elo</option>
+                    <option value="amex">American Express</option>
+                    <option value="outro">Outra</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="limiteCartao">Limite</label>
+                <input type="number" id="limiteCartao" min="0.01" step="0.01" placeholder="0,00">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="fechamentoCartao">Dia do fechamento</label>
+                <input type="number" id="fechamentoCartao" min="1" max="31">
+            </div>
+            <div class="form-group">
+                <label for="vencimentoCartao">Dia do vencimento</label>
+                <input type="number" id="vencimentoCartao" min="1" max="31">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="contaPagamentoCartao">Conta para pagamento</label>
+            <select id="contaPagamentoCartao"></select>
+        </div>
+
+        <div class="form-group">
+            <label for="corCartao">Cor</label>
+            <input type="color" id="corCartao" value="#9b7cff">
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="btnCancelarCartao">Cancelar</button>
+            <button type="button" class="btn-save" id="btnSalvarCartao">Criar cartão</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE COMPRA NO CARTÃO -->
+<div class="modal-overlay" id="modalCompraCartao" aria-hidden="true">
+    <div class="modal-content modal-conta-content" role="dialog" aria-modal="true">
+        <button type="button" class="modal-close" id="btnFecharCompraCartao" aria-label="Fechar">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <h3>Nova compra no cartão</h3>
+
+        <div class="form-group">
+            <label for="cartaoCompra">Cartão</label>
+            <select id="cartaoCompra"></select>
+        </div>
+        <div class="form-group">
+            <label for="descricaoCompraCartao">Descrição</label>
+            <input type="text" id="descricaoCompraCartao" maxlength="60" placeholder="Ex: Notebook ou supermercado">
+        </div>
+        <div class="form-group">
+            <label for="tipoCompraCartao">Tipo do gasto</label>
+            <select id="tipoCompraCartao">
+                <option value="variavel">Gasto variável</option>
+                <option value="fixo">Gasto fixo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="categoriaCompraCartao">Categoria</label>
+            <select id="categoriaCompraCartao"></select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="valorCompraCartao">Valor total</label>
+                <input type="number" id="valorCompraCartao" min="0.01" step="0.01" placeholder="0,00">
+            </div>
+            <div class="form-group">
+                <label for="parcelasCompraCartao">Parcelas</label>
+                <input type="number" id="parcelasCompraCartao" min="1" max="60" value="1">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="dataCompraCartao">Data da compra</label>
+            <input type="date" id="dataCompraCartao">
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="btnCancelarCompraCartao">Cancelar</button>
+            <button type="button" class="btn-save" id="btnSalvarCompraCartao">Salvar compra</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE CONTA -->
+<div class="modal-overlay" id="modalConta" aria-hidden="true">
+    <div class="modal-content modal-conta-content" role="dialog" aria-modal="true" aria-labelledby="tituloModalConta">
+        <button type="button" class="modal-close" id="btnFecharModalConta" aria-label="Fechar">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <h3 id="tituloModalConta">Nova conta</h3>
+        <input type="hidden" id="contaEmEdicaoId">
+
+        <div class="form-group">
+            <label for="nomeConta">Nome da conta</label>
+            <input type="text" id="nomeConta" maxlength="40" placeholder="Ex: Nubank, Inter ou Carteira">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="tipoConta">Tipo</label>
+                <select id="tipoConta">
+                    <option value="corrente">Conta corrente</option>
+                    <option value="poupanca">Poupança</option>
+                    <option value="carteira">Carteira</option>
+                    <option value="investimento">Investimento</option>
+                    <option value="outro">Outro</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="corConta">Cor</label>
+                <input type="color" id="corConta" value="#d9ad26">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="saldoInicialConta">Saldo inicial</label>
+            <input type="number" id="saldoInicialConta" step="0.01" placeholder="0,00">
+            <small class="form-helper">Use o saldo existente antes dos lançamentos cadastrados.</small>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="btnCancelarConta">Cancelar</button>
+            <button type="button" class="btn-save" id="btnSalvarConta">Criar conta</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE TRANSFERÊNCIA -->
+<div class="modal-overlay" id="modalTransferencia" aria-hidden="true">
+    <div class="modal-content modal-conta-content" role="dialog" aria-modal="true" aria-labelledby="tituloModalTransferencia">
+        <button type="button" class="modal-close" id="btnFecharModalTransferencia" aria-label="Fechar">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <h3 id="tituloModalTransferencia">Transferir entre contas</h3>
+
+        <div class="form-group">
+            <label for="contaOrigemTransferencia">Conta de origem</label>
+            <select id="contaOrigemTransferencia"></select>
+        </div>
+
+        <div class="form-group">
+            <label for="contaDestinoTransferencia">Conta de destino</label>
+            <select id="contaDestinoTransferencia"></select>
+        </div>
+
+        <div class="form-group">
+            <label for="valorTransferencia">Valor</label>
+            <input type="number" id="valorTransferencia" min="0.01" step="0.01" placeholder="0,00">
+        </div>
+
+        <div class="form-group">
+            <label for="descricaoTransferencia">Descrição</label>
+            <input type="text" id="descricaoTransferencia" maxlength="60" value="Transferência entre contas">
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="btnCancelarTransferencia">Cancelar</button>
+            <button type="button" class="btn-save" id="btnSalvarTransferencia">Transferir</button>
+        </div>
+    </div>
+</div>
+
  <div
     class="modal-overlay"
     id="modalLancamento"
@@ -851,6 +1377,11 @@
             </label>
 
             <select id="categoriaLancamento"></select>
+        </div>
+
+        <div class="form-group" id="areaConta">
+            <label for="contaLancamento">Conta</label>
+            <select id="contaLancamento"></select>
         </div>
 
         <div class="form-group" id="areaCaixinha" style="display: none;">
@@ -1009,5 +1540,8 @@
 <script src="js/storage.js"></script>
 <script src="js/state.js"></script>
 <script src="js/script.js"></script>
+<script src="js/accounts.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/navigation.js"></script>
 </body>
 </html>

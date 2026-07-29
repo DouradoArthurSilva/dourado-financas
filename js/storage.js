@@ -57,6 +57,159 @@ const categoriasSalvas = lerJSONLocalStorage(
     null
 );
 
+const contasSalvas = lerJSONLocalStorage(
+    'dourado_contas',
+    null
+);
+
+const cartoesSalvos = lerJSONLocalStorage(
+    'dourado_cartoes',
+    []
+);
+
+const CONTA_PRINCIPAL_ID = 'conta-principal';
+
+const contasPadrao = [{
+    id: CONTA_PRINCIPAL_ID,
+    nome: 'Conta principal',
+    tipo: 'corrente',
+    saldoInicial: 0,
+    cor: '#d9ad26',
+    icone: 'building-columns',
+    ativa: true,
+    arquivada: false,
+    sistema: true,
+    criadaEm: new Date().toISOString(),
+    atualizadaEm: new Date().toISOString()
+}];
+
+function normalizarConta(conta, indice) {
+    const dados = conta && typeof conta === 'object'
+        ? conta
+        : {};
+
+    const tipos = [
+        'corrente',
+        'poupanca',
+        'carteira',
+        'investimento',
+        'outro'
+    ];
+
+    return {
+        id: String(
+            dados.id ||
+            `conta-${Date.now()}-${indice}`
+        ),
+        nome: String(
+            dados.nome || 'Nova conta'
+        ).trim(),
+        tipo: tipos.includes(dados.tipo)
+            ? dados.tipo
+            : 'corrente',
+        saldoInicial:
+            Number(dados.saldoInicial) || 0,
+        cor: /^#[0-9a-f]{6}$/i.test(
+            String(dados.cor)
+        )
+            ? dados.cor
+            : '#d9ad26',
+        icone: String(
+            dados.icone || 'building-columns'
+        ),
+        ativa: dados.ativa !== false,
+        arquivada: dados.arquivada === true,
+        sistema: dados.sistema === true,
+        criadaEm:
+            dados.criadaEm ||
+            new Date().toISOString(),
+        atualizadaEm:
+            dados.atualizadaEm ||
+            dados.criadaEm ||
+            new Date().toISOString()
+    };
+}
+
+let contas = (
+    Array.isArray(contasSalvas) &&
+    contasSalvas.length > 0
+        ? contasSalvas
+        : contasPadrao
+).map(normalizarConta);
+
+function normalizarCartao(cartao, indice) {
+    const dados =
+        cartao && typeof cartao === 'object'
+            ? cartao
+            : {};
+
+    const fechamento = Number(
+        dados.diaFechamento
+    );
+    const vencimento = Number(
+        dados.diaVencimento
+    );
+
+    return {
+        id: String(
+            dados.id ||
+            `cartao-${Date.now()}-${indice}`
+        ),
+        nome: String(
+            dados.nome || 'Novo cartão'
+        ).trim(),
+        bandeira: String(
+            dados.bandeira || 'outro'
+        ),
+        limite: Math.max(
+            Number(dados.limite) || 0,
+            0
+        ),
+        diaFechamento:
+            Number.isInteger(fechamento) &&
+            fechamento >= 1 &&
+            fechamento <= 31
+                ? fechamento
+                : 1,
+        diaVencimento:
+            Number.isInteger(vencimento) &&
+            vencimento >= 1 &&
+            vencimento <= 31
+                ? vencimento
+                : 10,
+        contaPagamentoId:
+            dados.contaPagamentoId ||
+            CONTA_PRINCIPAL_ID,
+        cor: /^#[0-9a-f]{6}$/i.test(
+            String(dados.cor)
+        )
+            ? dados.cor
+            : '#9b7cff',
+        ativo: dados.ativo !== false,
+        arquivado: dados.arquivado === true,
+        criadoEm:
+            dados.criadoEm ||
+            new Date().toISOString(),
+        atualizadoEm:
+            dados.atualizadoEm ||
+            dados.criadoEm ||
+            new Date().toISOString()
+    };
+}
+
+let cartoes = Array.isArray(cartoesSalvos)
+    ? cartoesSalvos.map(normalizarCartao)
+    : [];
+
+transacoes = Array.isArray(transacoes)
+    ? transacoes.map(transacao => ({
+        ...transacao,
+        contaId:
+            transacao.contaId ||
+            CONTA_PRINCIPAL_ID
+    }))
+    : [];
+
 const categoriasPadrao = [
     {
         id: 'receita-salario',
@@ -199,6 +352,7 @@ function normalizarCategoria(categoria, indice) {
             dados.cor || '#8f99a8'
         ),
         ativa: dados.ativa !== false,
+        arquivada: dados.arquivada === true,
         sistema: dados.sistema === true,
         criadaEm:
             dados.criadaEm ||
@@ -211,7 +365,8 @@ function normalizarCategoria(categoria, indice) {
 }
 
 let categorias = (
-    Array.isArray(categoriasSalvas)
+    Array.isArray(categoriasSalvas) &&
+    categoriasSalvas.length > 0
         ? categoriasSalvas
         : categoriasPadrao.map(categoria => ({
             ...categoria,
@@ -414,6 +569,8 @@ function normalizarRecorrencia(recorrencia, indice) {
 
         status,
 
+        arquivada: dados.arquivada === true,
+
         frequencia: 'mensal',
 
         descricao: String(
@@ -429,6 +586,12 @@ function normalizarRecorrencia(recorrencia, indice) {
             dados.categoriaId === undefined
                 ? null
                 : String(dados.categoriaId),
+
+        contaId:
+            dados.contaId === null ||
+            dados.contaId === undefined
+                ? CONTA_PRINCIPAL_ID
+                : String(dados.contaId),
 
         pagamento: dados.pagamento || '',
 
@@ -479,5 +642,15 @@ function salvarNoBanco() {
     localStorage.setItem(
         'dourado_categorias',
         JSON.stringify(categorias)
+    );
+
+    localStorage.setItem(
+        'dourado_contas',
+        JSON.stringify(contas)
+    );
+
+    localStorage.setItem(
+        'dourado_cartoes',
+        JSON.stringify(cartoes)
     );
 }

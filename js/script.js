@@ -4,6 +4,7 @@
 // CONFIGURAÇÃO DO GRÁFICO (CHART.JS)
 // ==========================================
 let graficoApp;
+let graficoCategorias;
 
 window.onload = function () {
     const canvasGrafico = document.getElementById('graficoResumo');
@@ -61,6 +62,52 @@ window.onload = function () {
         });
     }
 
+    const canvasCategorias = document.getElementById(
+        'graficoCategorias'
+    );
+
+    if (canvasCategorias) {
+        graficoCategorias = new Chart(
+            canvasCategorias.getContext('2d'),
+            {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [],
+                        borderColor: '#1b283d',
+                        borderWidth: 2,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '66%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label(contexto) {
+                                    const valor =
+                                        Number(contexto.raw) || 0;
+
+                                    return (
+                                        `${contexto.label}: ` +
+                                        `R$ ${formatarMoeda(valor)}`
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        );
+    }
+
   const recorrenciasGeradas =
     processarRecorrenciasMensais();
 
@@ -113,6 +160,9 @@ totalRecorrenciasEncerradas: document.getElementById(
 ),
     tbodyHistorico: document.getElementById('tbodyHistorico'),
     pesquisaHistorico: document.getElementById('pesquisaHistorico'),
+    categoriaHistorico: document.getElementById(
+        'categoriaHistorico'
+    ),
     mesHistorico: document.getElementById('mesHistorico'),
     ordenacaoHistorico: document.getElementById('ordenacaoHistorico'),
     filtrosHistorico: document.getElementById('filtrosHistorico'),
@@ -121,6 +171,24 @@ totalRecorrenciasEncerradas: document.getElementById(
     totalHistorico: document.getElementById('totalHistorico'),
     historicoVazio: document.getElementById('historicoVazio'),
     historicoLancamentos: document.getElementById('historicoLancamentos'),
+    periodoRelatorioCategorias: document.getElementById(
+        'periodoRelatorioCategorias'
+    ),
+    totalGastosCategorias: document.getElementById(
+        'totalGastosCategorias'
+    ),
+    quantidadeCategoriasUtilizadas: document.getElementById(
+        'quantidadeCategoriasUtilizadas'
+    ),
+    maiorCategoriaGasto: document.getElementById(
+        'maiorCategoriaGasto'
+    ),
+    rankingCategorias: document.getElementById(
+        'rankingCategorias'
+    ),
+    relatorioCategoriasVazio: document.getElementById(
+        'relatorioCategoriasVazio'
+    ),
 
    caixinhasGrid: document.getElementById('caixinhasGrid'),
 caixinhaSelect: document.getElementById('caixinhaSelect'),
@@ -174,6 +242,7 @@ const estadoHistorico = {
     filtro: 'todos',
     pesquisa: '',
     mes: 'todos',
+    categoria: 'todas',
     ordenacao: 'recentes'
 };
 
@@ -318,7 +387,11 @@ function gerarIdUnico() {
 
         const meses = [...new Set(
             transacoes
-                .map(transacao => obterChaveMes(transacao.data))
+                .map(transacao =>
+                    obterCompetenciaTransacao(
+                        transacao
+                    )
+                )
                 .filter(Boolean)
         )].sort((a, b) => b.localeCompare(a));
 
@@ -336,6 +409,70 @@ function gerarIdUnico() {
         const mesAindaExiste = mesSelecionado === 'todos' || meses.includes(mesSelecionado);
         estadoHistorico.mes = mesAindaExiste ? mesSelecionado : 'todos';
         elementos.mesHistorico.value = estadoHistorico.mes;
+    }
+
+    function atualizarOpcoesCategoriasHistorico() {
+        if (!elementos.categoriaHistorico) return;
+
+        const categoriaSelecionada =
+            estadoHistorico.categoria;
+
+        elementos.categoriaHistorico.innerHTML = `
+            <option value="todas">Todas as categorias</option>
+            <option value="sem-categoria">Sem categoria</option>
+        `;
+
+        [...categorias]
+            .sort((a, b) => {
+                if (a.tipo !== b.tipo) {
+                    return a.tipo.localeCompare(b.tipo);
+                }
+
+                return a.nome.localeCompare(
+                    b.nome,
+                    'pt-BR'
+                );
+            })
+            .forEach(categoria => {
+                const opcao =
+                    document.createElement('option');
+
+                const pai = categoria.categoriaPaiId
+                    ? obterCategoriaPorId(
+                        categoria.categoriaPaiId
+                    )
+                    : null;
+
+                opcao.value = categoria.id;
+                opcao.textContent = pai
+                    ? `${pai.nome} › ${categoria.nome}`
+                    : categoria.nome;
+
+                if (categoria.arquivada) {
+                    opcao.textContent += ' (arquivada)';
+                } else if (!categoria.ativa) {
+                    opcao.textContent += ' (inativa)';
+                }
+
+                elementos.categoriaHistorico
+                    .appendChild(opcao);
+            });
+
+        const valorAindaExiste =
+            categoriaSelecionada === 'todas' ||
+            categoriaSelecionada === 'sem-categoria' ||
+            categorias.some(categoria =>
+                String(categoria.id) ===
+                String(categoriaSelecionada)
+            );
+
+        estadoHistorico.categoria =
+            valorAindaExiste
+                ? categoriaSelecionada
+                : 'todas';
+
+        elementos.categoriaHistorico.value =
+            estadoHistorico.categoria;
     }
 
     function transacaoCombinaComFiltro(transacao) {
@@ -357,14 +494,31 @@ function gerarIdUnico() {
         const filtradas = transacoes.filter(transacao => {
             const combinaFiltro = transacaoCombinaComFiltro(transacao);
             const combinaMes = estadoHistorico.mes === 'todos' ||
-                obterChaveMes(transacao.data) === estadoHistorico.mes;
+                obterCompetenciaTransacao(transacao) === estadoHistorico.mes;
+
+            const combinaCategoria =
+                estadoHistorico.categoria === 'todas' ||
+                (
+                    estadoHistorico.categoria ===
+                        'sem-categoria'
+                        ? !transacao.categoriaId
+                        : String(transacao.categoriaId) ===
+                            String(
+                                estadoHistorico.categoria
+                            )
+                );
 
             const textoPesquisavel = `${transacao.descricao || ''} ${transacao.categoriaText || ''} ${transacao.categoriaNome || ''}`
                 .toLocaleLowerCase('pt-BR');
 
             const combinaPesquisa = pesquisa === '' || textoPesquisavel.includes(pesquisa);
 
-            return combinaFiltro && combinaMes && combinaPesquisa;
+            return (
+                combinaFiltro &&
+                combinaMes &&
+                combinaCategoria &&
+                combinaPesquisa
+            );
         });
 
         return filtradas.sort((a, b) => {
@@ -398,11 +552,19 @@ function gerarIdUnico() {
         const chaveMesAnterior = `${dataAnterior.getFullYear()}-${String(dataAnterior.getMonth() + 1).padStart(2, '0')}`;
 
         const totalAtual = transacoes
-            .filter(t => t.tipo === 'variavel' && obterChaveMes(t.data) === estadoHistorico.mes)
+            .filter(t =>
+                t.tipo === 'variavel' &&
+                obterCompetenciaTransacao(t) ===
+                    estadoHistorico.mes
+            )
             .reduce((total, t) => total + t.valor, 0);
 
         const totalAnterior = transacoes
-            .filter(t => t.tipo === 'variavel' && obterChaveMes(t.data) === chaveMesAnterior)
+            .filter(t =>
+                t.tipo === 'variavel' &&
+                obterCompetenciaTransacao(t) ===
+                    chaveMesAnterior
+            )
             .reduce((total, t) => total + t.valor, 0);
 
         if (totalAtual === 0 && totalAnterior === 0) {
@@ -432,14 +594,48 @@ function gerarIdUnico() {
         if (!elementos.tbodyHistorico) return;
 
         atualizarOpcoesMeses();
+        atualizarOpcoesCategoriasHistorico();
 
         const transacoesFiltradas = obterTransacoesFiltradas();
         elementos.tbodyHistorico.innerHTML = '';
 
         transacoesFiltradas.forEach(transacao => {
-            const permiteAlterarStatus = transacao.tipo === 'fixo' || transacao.tipo === 'variavel';
+            const permiteAlterarStatus =
+                (
+                    transacao.tipo === 'fixo' ||
+                    transacao.tipo === 'variavel'
+                ) &&
+                !transacao.cartaoId;
 
-            const statusHTML = permiteAlterarStatus
+            const contaOrigem =
+                obterContaPorId(
+                    transacao.contaOrigemId ||
+                    transacao.contaId
+                );
+
+            const contaDestino =
+                obterContaPorId(
+                    transacao.contaDestinoId
+                );
+
+            const textoConta =
+                transacao.tipo === 'transferencia'
+                    ? `${contaOrigem ? contaOrigem.nome : 'Conta'} → ${contaDestino ? contaDestino.nome : 'Conta'}`
+                    : contaOrigem
+                        ? contaOrigem.nome
+                        : '';
+
+            const pagamentoFaturaCartao =
+                transacao.cartaoId
+                    ? obterPagamentoFatura(
+                        transacao.cartaoId,
+                        transacao.competencia
+                    )
+                    : null;
+
+            const statusHTML = transacao.cartaoId
+                ? `<span class="status-badge ${pagamentoFaturaCartao ? 'status-pago' : 'status-pendente'} status-static">${pagamentoFaturaCartao ? 'Fatura paga' : 'Na fatura'}</span>`
+                : permiteAlterarStatus
                 ? `<button type="button" class="status-badge ${transacao.isPago ? 'status-pago' : 'status-pendente'}" title="Clique para alterar o status">${transacao.isPago ? 'Pago' : 'Pendente'}</button>`
                 : '<span class="status-badge status-pago status-static">Efetivado</span>';
 
@@ -452,6 +648,11 @@ function gerarIdUnico() {
                     ${
                         transacao.categoriaNome
                             ? `<small class="history-category-name">${escaparHTML(transacao.categoriaNome)}</small>`
+                            : ''
+                    }
+                    ${
+                        textoConta
+                            ? `<small class="history-category-name"><i class="fa-solid fa-building-columns"></i> ${escaparHTML(textoConta)}</small>`
                             : ''
                     }
                 </td>
@@ -496,6 +697,13 @@ function gerarIdUnico() {
         renderizarHistorico();
 
         if (rolarAteHistorico && elementos.historicoLancamentos) {
+            if (
+                typeof navegarParaArea ===
+                'function'
+            ) {
+                navegarParaArea('lancamentos');
+            }
+
             elementos.historicoLancamentos.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start'
@@ -726,6 +934,8 @@ modalReativarRecorrencia.addEventListener(
     }
 );
 
+let filtroRecorrenciasAtual = 'atuais';
+
 function renderizarRecorrencias() {
     if (!elementos.recorrenciasLista) {
         return;
@@ -733,6 +943,11 @@ function renderizarRecorrencias() {
 
     const totais = recorrencias.reduce(
         (resultado, recorrencia) => {
+            if (recorrencia.arquivada) {
+                resultado.arquivadas += 1;
+                return resultado;
+            }
+
             if (recorrencia.status === 'ativa') {
                 resultado.ativas += 1;
             } else if (
@@ -750,7 +965,8 @@ function renderizarRecorrencias() {
         {
             ativas: 0,
             pausadas: 0,
-            encerradas: 0
+            encerradas: 0,
+            arquivadas: 0
         }
     );
 
@@ -763,17 +979,42 @@ function renderizarRecorrencias() {
     elementos.totalRecorrenciasEncerradas.textContent =
         totais.encerradas;
 
+    document.getElementById(
+        'totalRecorrenciasArquivadas'
+    ).textContent = totais.arquivadas;
+
     elementos.recorrenciasLista.innerHTML = '';
 
-    elementos.recorrenciasVazio.hidden =
-        recorrencias.length > 0;
+    const recorrenciasVisiveis =
+        recorrencias.filter(recorrencia => {
+            if (filtroRecorrenciasAtual === 'todas') {
+                return true;
+            }
 
-    if (recorrencias.length === 0) {
+            if (filtroRecorrenciasAtual === 'arquivadas') {
+                return recorrencia.arquivada;
+            }
+
+            if (recorrencia.arquivada) {
+                return false;
+            }
+
+            if (filtroRecorrenciasAtual === 'encerradas') {
+                return recorrencia.status === 'encerrada';
+            }
+
+            return recorrencia.status !== 'encerrada';
+        });
+
+    elementos.recorrenciasVazio.hidden =
+        recorrenciasVisiveis.length > 0;
+
+    if (recorrenciasVisiveis.length === 0) {
         return;
     }
 
     const recorrenciasOrdenadas = [
-        ...recorrencias
+        ...recorrenciasVisiveis
     ].sort((a, b) => {
         const ordemStatus = {
             ativa: 0,
@@ -802,7 +1043,8 @@ function renderizarRecorrencias() {
                 : 'reativar';
 
         const botaoEstado =
-            status !== 'encerrada'
+            status !== 'encerrada' &&
+            !recorrencia.arquivada
                 ? `
                     <button
                         type="button"
@@ -814,6 +1056,39 @@ function renderizarRecorrencias() {
                     </button>
                 `
                 : '';
+
+        const botaoArquivar = recorrencia.arquivada
+            ? `
+                <button
+                    type="button"
+                    class="btn-recorrencia"
+                    data-acao-recorrencia="restaurar"
+                    data-recorrencia-id="${recorrencia.id}"
+                >
+                    Restaurar
+                </button>
+            `
+            : `
+                <button
+                    type="button"
+                    class="btn-recorrencia"
+                    data-acao-recorrencia="arquivar"
+                    data-recorrencia-id="${recorrencia.id}"
+                >
+                    Arquivar
+                </button>
+            `;
+
+        const botaoExcluir = `
+            <button
+                type="button"
+                class="btn-recorrencia btn-recorrencia-perigo"
+                data-acao-recorrencia="excluir"
+                data-recorrencia-id="${recorrencia.id}"
+            >
+                Excluir
+            </button>
+        `;
 
         elementos.recorrenciasLista.insertAdjacentHTML(
             'beforeend',
@@ -879,7 +1154,8 @@ function renderizarRecorrencias() {
 
                   <div class="recorrencia-acoes">
     ${
-        status !== 'encerrada'
+        status !== 'encerrada' &&
+        !recorrencia.arquivada
             ? `
                 <button
                     type="button"
@@ -896,7 +1172,8 @@ function renderizarRecorrencias() {
     ${botaoEstado}
 
                         ${
-                            status !== 'encerrada'
+                            status !== 'encerrada' &&
+                            !recorrencia.arquivada
                                 ? `
                                     <button
                                         type="button"
@@ -909,14 +1186,207 @@ function renderizarRecorrencias() {
                                 `
                                 : ''
                         }
+
+                        ${botaoArquivar}
+                        ${botaoExcluir}
                     </div>
                 </article>
             `
         );
     });
 }
+
+function obterDadosRelatorioCategorias() {
+    const grupos = new Map();
+
+    transacoes
+        .filter(transacao => {
+            return (
+                (
+                    transacao.tipo === 'fixo' ||
+                    transacao.tipo === 'variavel'
+                ) &&
+                obterCompetenciaTransacao(transacao) ===
+                    competenciaPainelSelecionada
+            );
+        })
+        .forEach(transacao => {
+            const categoria = transacao.categoriaId
+                ? obterCategoriaPorId(
+                    transacao.categoriaId
+                )
+                : null;
+
+            const nome = categoria
+                ? categoria.nome
+                : (
+                    transacao.categoriaNome ||
+                    'Sem categoria'
+                );
+
+            const chave = categoria
+                ? `categoria:${categoria.id}`
+                : `legado:${nome}`;
+
+            const corCategoria =
+                categoria &&
+                /^#[0-9a-f]{6}$/i.test(categoria.cor)
+                    ? categoria.cor
+                    : '#8f99a8';
+
+            const grupoAtual = grupos.get(chave) || {
+                nome,
+                cor: corCategoria,
+                total: 0,
+                quantidade: 0
+            };
+
+            grupoAtual.total +=
+                Number(transacao.valor) || 0;
+            grupoAtual.quantidade += 1;
+
+            grupos.set(chave, grupoAtual);
+        });
+
+    return [...grupos.values()].sort(
+        (a, b) => b.total - a.total
+    );
+}
+
+function renderizarRelatorioCategorias() {
+    if (!elementos.rankingCategorias) return;
+
+    const dados = obterDadosRelatorioCategorias();
+    const total = dados.reduce(
+        (soma, item) => soma + item.total,
+        0
+    );
+
+    elementos.periodoRelatorioCategorias.textContent =
+        `Distribuição de ${formatarTituloCompetencia(
+            competenciaPainelSelecionada
+        ).toLocaleLowerCase('pt-BR')}.`;
+
+    elementos.totalGastosCategorias.textContent =
+        `R$ ${formatarMoeda(total)}`;
+
+    elementos.quantidadeCategoriasUtilizadas.textContent =
+        String(dados.length);
+
+    elementos.maiorCategoriaGasto.textContent =
+        dados.length > 0
+            ? dados[0].nome
+            : 'Nenhum';
+
+    elementos.rankingCategorias.innerHTML = '';
+
+    if (elementos.relatorioCategoriasVazio) {
+        elementos.relatorioCategoriasVazio.hidden =
+            dados.length > 0;
+    }
+
+    const canvas = document.getElementById(
+        'graficoCategorias'
+    );
+
+    if (canvas) {
+        canvas.hidden = dados.length === 0;
+    }
+
+    if (dados.length === 0) {
+        if (graficoCategorias) {
+            graficoCategorias.data.labels = [];
+            graficoCategorias.data.datasets[0].data = [];
+            graficoCategorias.data.datasets[0]
+                .backgroundColor = [];
+            graficoCategorias.update();
+        }
+
+        return;
+    }
+
+    dados.slice(0, 6).forEach((item, indice) => {
+        const percentual = total > 0
+            ? (item.total / total) * 100
+            : 0;
+
+        elementos.rankingCategorias
+            .insertAdjacentHTML(
+                'beforeend',
+                `
+                    <article class="ranking-categoria-item">
+                        <span
+                            class="ranking-categoria-posicao"
+                            style="--ranking-cor: ${item.cor};"
+                        >
+                            ${indice + 1}
+                        </span>
+
+                        <div class="ranking-categoria-info">
+                            <div>
+                                <strong>${escaparHTML(item.nome)}</strong>
+                                <span>${item.quantidade} ${item.quantidade === 1 ? 'lançamento' : 'lançamentos'}</span>
+                            </div>
+
+                            <div class="ranking-categoria-valores">
+                                <strong>R$ ${formatarMoeda(item.total)}</strong>
+                                <span>${percentual.toFixed(1).replace('.', ',')}%</span>
+                            </div>
+                        </div>
+                    </article>
+                `
+            );
+    });
+
+    if (dados.length > 6) {
+        elementos.rankingCategorias
+            .insertAdjacentHTML(
+                'beforeend',
+                `
+                    <p class="ranking-categorias-restante">
+                        Mais ${dados.length - 6} categorias incluídas no gráfico.
+                    </p>
+                `
+            );
+    }
+
+    if (graficoCategorias) {
+        const principais = dados.slice(0, 6);
+        const restantes = dados.slice(6);
+        const dadosGrafico = [...principais];
+
+        if (restantes.length > 0) {
+            dadosGrafico.push({
+                nome: 'Outras',
+                cor: '#59657a',
+                total: restantes.reduce(
+                    (soma, item) =>
+                        soma + item.total,
+                    0
+                )
+            });
+        }
+
+        graficoCategorias.data.labels =
+            dadosGrafico.map(item => item.nome);
+
+        graficoCategorias.data.datasets[0].data =
+            dadosGrafico.map(item => item.total);
+
+        graficoCategorias.data.datasets[0]
+            .backgroundColor =
+                dadosGrafico.map(item => item.cor);
+
+        graficoCategorias.update();
+    }
+}
+
     function renderizarTela() {
+        renderizarCategorias();
         renderizarRecorrencias();
+        renderizarRelatorioCategorias();
+        renderizarContas();
+        renderizarCartoes();
         if (elementos.competenciaPainel) {
     elementos.competenciaPainel.value =
         competenciaPainelSelecionada;
@@ -1720,14 +2190,53 @@ const categoriaLancamento = document.getElementById(
     'categoriaLancamento'
 );
 
+const contaLancamento = document.getElementById(
+    'contaLancamento'
+);
+
 function obterCategoriasAtivasPorTipo(tipo) {
-    return categorias.filter(categoria => {
-        return (
-            categoria.ativa &&
-            categoria.tipo === tipo &&
-            categoria.categoriaPaiId === null
-        );
-    });
+    return categorias
+        .filter(categoria => {
+            if (
+                !categoria.ativa ||
+                categoria.tipo !== tipo
+            ) {
+                return false;
+            }
+
+            if (!categoria.categoriaPaiId) {
+                return true;
+            }
+
+            const categoriaPai =
+                obterCategoriaPorId(
+                    categoria.categoriaPaiId
+                );
+
+            return Boolean(
+                categoriaPai &&
+                categoriaPai.ativa
+            );
+        })
+        .sort((a, b) => {
+            if (
+                a.categoriaPaiId ===
+                b.categoriaPaiId
+            ) {
+                return a.nome.localeCompare(
+                    b.nome,
+                    'pt-BR'
+                );
+            }
+
+            if (!a.categoriaPaiId) return -1;
+            if (!b.categoriaPaiId) return 1;
+
+            return a.nome.localeCompare(
+                b.nome,
+                'pt-BR'
+            );
+        });
 }
 
 function obterCategoriaPorId(categoriaId) {
@@ -1742,7 +2251,8 @@ function preencherSeletorCategorias(
     tipo,
     categoriaSelecionadaId = null
 ) {
-    seletor.innerHTML = '';
+    seletor.innerHTML =
+        '<option value="">Sem categoria</option>';
 
     const categoriasDisponiveis =
         obterCategoriasAtivasPorTipo(tipo);
@@ -1752,7 +2262,16 @@ function preencherSeletorCategorias(
             document.createElement('option');
 
         opcao.value = categoria.id;
-        opcao.textContent = categoria.nome;
+        const categoriaPai =
+            categoria.categoriaPaiId
+                ? obterCategoriaPorId(
+                    categoria.categoriaPaiId
+                )
+                : null;
+
+        opcao.textContent = categoriaPai
+            ? `${categoriaPai.nome} › ${categoria.nome}`
+            : categoria.nome;
 
         seletor.appendChild(opcao);
     });
@@ -1945,7 +2464,6 @@ document.getElementById('modalTitle').innerText = titulo;
 limparFormularioRecorrencia();
 
 const permiteRecorrencia = [
-    'salario',
     'fixo',
     'variavel'
 ].includes(tipo);
@@ -1965,6 +2483,8 @@ if (permiteCategoria) {
         tipo
     );
 }
+
+preencherSeletorContas(contaLancamento);
 
 areaRecorrencia.style.display =
     permiteRecorrencia ? 'block' : 'none';
@@ -2046,6 +2566,10 @@ document
             document.getElementById('valor').value
         );
 
+        const contaId = contaLancamento.value;
+        const contaSelecionada =
+            obterContaPorId(contaId);
+
         const caixinhaId = Number(
             document.getElementById(
                 'caixinhaSelect'
@@ -2059,7 +2583,7 @@ document
         ].includes(tipo);
 
         const categoriaId = permiteCategoria
-            ? categoriaLancamento.value
+            ? categoriaLancamento.value || null
             : null;
 
         const categoriaSelecionada =
@@ -2077,7 +2601,20 @@ document
         }
 
         if (
+            !contaSelecionada ||
+            !contaSelecionada.ativa ||
+            contaSelecionada.arquivada
+        ) {
+            mostrarToast(
+                'Selecione uma conta ativa.',
+                'aviso'
+            );
+            return;
+        }
+
+        if (
             permiteCategoria &&
+            categoriaId &&
             (
                 !categoriaSelecionada ||
                 !categoriaSelecionada.ativa ||
@@ -2286,7 +2823,8 @@ document
                 descricao,
                 valor,
                 tipoLancamento: tipo,
-                categoriaId,
+                categoriaId: categoriaId || null,
+                contaId,
                 pagamento: '',
                 caixinhaId: null,
                 diaVencimento,
@@ -2316,6 +2854,7 @@ document
         transacoes.push({
             id: gerarIdUnico(),
             tipo,
+            contaId,
             caixinhaId:
                 tipo === 'guardado' ||
                 tipo === 'resgate'
@@ -2333,7 +2872,7 @@ document
                 ? 'recorrencia'
                 : 'manual',
             categoriaText,
-            categoriaId,
+            categoriaId: categoriaId || null,
             categoriaNome:
                 categoriaSelecionada
                     ? categoriaSelecionada.nome
@@ -2596,6 +3135,10 @@ function criarTransacaoDaRecorrencia(
 
         tipo: recorrencia.tipoLancamento,
 
+        contaId:
+            recorrencia.contaId ||
+            CONTA_PRINCIPAL_ID,
+
         caixinhaId: null,
 
         descricao: recorrencia.descricao,
@@ -2644,7 +3187,10 @@ function processarRecorrenciasMensais() {
     let dadosAlterados = false;
 
     recorrencias.forEach(recorrencia => {
-        if (recorrencia.status !== 'ativa') {
+        if (
+            recorrencia.status !== 'ativa' ||
+            recorrencia.arquivada
+        ) {
             return;
         }
 
@@ -2790,6 +3336,16 @@ function processarRecorrenciasMensais() {
         });
     }
 
+    if (elementos.categoriaHistorico) {
+        elementos.categoriaHistorico.addEventListener(
+            'change',
+            function () {
+                estadoHistorico.categoria = this.value;
+                renderizarHistorico();
+            }
+        );
+    }
+
     if (elementos.ordenacaoHistorico) {
         elementos.ordenacaoHistorico.addEventListener('change', function () {
             estadoHistorico.ordenacao = this.value;
@@ -2882,6 +3438,11 @@ const categoriaEdicaoRecorrencia =
         'categoriaEdicaoRecorrencia'
     );
 
+const contaEdicaoRecorrencia =
+    document.getElementById(
+        'contaEdicaoRecorrencia'
+    );
+
 const diaEdicaoRecorrencia =
     document.getElementById(
         'diaEdicaoRecorrencia'
@@ -2945,6 +3506,11 @@ function abrirEdicaoRecorrencia(recorrencia) {
         categoriaEdicaoRecorrencia,
         recorrencia.tipoLancamento,
         recorrencia.categoriaId
+    );
+
+    preencherSeletorContas(
+        contaEdicaoRecorrencia,
+        recorrencia.contaId
     );
 
     diaEdicaoRecorrencia.value =
@@ -3029,10 +3595,16 @@ function salvarEdicaoRecorrencia() {
         tipoEdicaoRecorrencia.value;
 
     const categoriaId =
-        categoriaEdicaoRecorrencia.value;
+        categoriaEdicaoRecorrencia.value || null;
 
     const categoriaSelecionada =
         obterCategoriaPorId(categoriaId);
+
+    const contaId =
+        contaEdicaoRecorrencia.value;
+
+    const contaSelecionada =
+        obterContaPorId(contaId);
 
     const dia = Number(
         diaEdicaoRecorrencia.value
@@ -3052,9 +3624,12 @@ function salvarEdicaoRecorrencia() {
     }
 
     if (
-        !categoriaSelecionada ||
-        !categoriaSelecionada.ativa ||
-        categoriaSelecionada.tipo !== tipo
+        categoriaId &&
+        (
+            !categoriaSelecionada ||
+            !categoriaSelecionada.ativa ||
+            categoriaSelecionada.tipo !== tipo
+        )
     ) {
         mostrarToast(
             'Selecione uma categoria válida.',
@@ -3062,6 +3637,18 @@ function salvarEdicaoRecorrencia() {
         );
 
         categoriaEdicaoRecorrencia.focus();
+        return;
+    }
+
+    if (
+        !contaSelecionada ||
+        !contaSelecionada.ativa ||
+        contaSelecionada.arquivada
+    ) {
+        mostrarToast(
+            'Selecione uma conta ativa.',
+            'aviso'
+        );
         return;
     }
 
@@ -3173,7 +3760,9 @@ function salvarEdicaoRecorrencia() {
     recorrencia.descricao = descricao;
     recorrencia.valor = valor;
     recorrencia.tipoLancamento = tipo;
-    recorrencia.categoriaId = categoriaId;
+    recorrencia.categoriaId =
+        categoriaId || null;
+    recorrencia.contaId = contaId;
     recorrencia.diaVencimento = dia;
     recorrencia.termino = termino;
     recorrencia.atualizadaEm =
@@ -3292,6 +3881,55 @@ if (elementos.recorrenciasLista) {
     return;
 }
 
+            if (acao === 'arquivar') {
+                recorrencia.arquivada = true;
+                recorrencia.atualizadaEm =
+                    new Date().toISOString();
+
+                salvarNoBanco();
+                renderizarTela();
+                mostrarToast(
+                    'Recorrência arquivada. Os lançamentos foram preservados.',
+                    'sucesso'
+                );
+                return;
+            }
+
+            if (acao === 'restaurar') {
+                recorrencia.arquivada = false;
+                recorrencia.atualizadaEm =
+                    new Date().toISOString();
+
+                salvarNoBanco();
+                renderizarTela();
+                mostrarToast(
+                    'Recorrência restaurada.',
+                    'sucesso'
+                );
+                return;
+            }
+
+            if (acao === 'excluir') {
+                const confirmou = confirm(
+                    `Excluir a recorrência "${recorrencia.descricao}"? Os lançamentos já criados permanecerão no histórico.`
+                );
+
+                if (!confirmou) return;
+
+                recorrencias = recorrencias.filter(
+                    item => Number(item.id) !==
+                        Number(recorrencia.id)
+                );
+
+                salvarNoBanco();
+                renderizarTela();
+                mostrarToast(
+                    'Recorrência excluída. O histórico foi preservado.',
+                    'sucesso'
+                );
+                return;
+            }
+
             if (acao === 'pausar') {
                 recorrencia.status = 'pausada';
                 recorrencia.atualizadaEm =
@@ -3338,6 +3976,21 @@ if (acao === 'reativar') {
         }
     );
 }
+
+const filtroRecorrencias =
+    document.getElementById('filtroRecorrencias');
+
+if (filtroRecorrencias) {
+    filtroRecorrencias.addEventListener(
+        'change',
+        evento => {
+            filtroRecorrenciasAtual =
+                evento.target.value;
+            renderizarRecorrencias();
+        }
+    );
+}
+
 if (elementos.competenciaPainel) {
     elementos.competenciaPainel.value =
         competenciaPainelSelecionada;
@@ -3376,3 +4029,862 @@ if (elementos.btnMesAtual) {
         }
     );
 }
+
+// ==========================================
+// GERENCIAMENTO DE CATEGORIAS
+// ==========================================
+const categoriasLista =
+    document.getElementById('categoriasLista');
+
+const filtroCategorias =
+    document.getElementById('filtroCategorias');
+
+const categoriasVazio =
+    document.getElementById('categoriasVazio');
+
+let filtroCategoriasAtual = 'ativas';
+
+const modalCategoria =
+    document.getElementById('modalCategoria');
+
+const categoriaEmEdicaoId =
+    document.getElementById(
+        'categoriaEmEdicaoId'
+    );
+
+const nomeCategoria =
+    document.getElementById('nomeCategoria');
+
+const tipoCategoria =
+    document.getElementById('tipoCategoria');
+
+const categoriaPai =
+    document.getElementById('categoriaPai');
+
+const iconeCategoria =
+    document.getElementById('iconeCategoria');
+
+const corCategoria =
+    document.getElementById('corCategoria');
+
+const ICONES_CATEGORIA = {
+    tag: 'fa-tag',
+    house: 'fa-house',
+    car: 'fa-car',
+    utensils: 'fa-utensils',
+    'heart-pulse': 'fa-heart-pulse',
+    'graduation-cap': 'fa-graduation-cap',
+    paw: 'fa-paw',
+    plane: 'fa-plane',
+    gamepad: 'fa-gamepad',
+    'bag-shopping': 'fa-bag-shopping',
+    coins: 'fa-coins',
+    'money-bill-wave': 'fa-money-bill-wave',
+    'file-invoice-dollar': 'fa-file-invoice-dollar',
+    repeat: 'fa-repeat',
+    'basket-shopping': 'fa-basket-shopping',
+    ellipsis: 'fa-ellipsis'
+};
+
+function obterIconeCategoria(icone) {
+    return ICONES_CATEGORIA[icone] ||
+        ICONES_CATEGORIA.tag;
+}
+
+function obterCorCategoriaSegura(cor) {
+    return /^#[0-9a-f]{6}$/i.test(
+        String(cor)
+    )
+        ? cor
+        : '#8f99a8';
+}
+
+function obterTextoTipoCategoria(tipo) {
+    const textos = {
+        salario: 'Receita',
+        fixo: 'Gasto fixo',
+        variavel: 'Gasto variável'
+    };
+
+    return textos[tipo] || 'Categoria';
+}
+
+function categoriaEstaEmUso(categoriaId) {
+    return (
+        transacoes.some(transacao =>
+            String(transacao.categoriaId) ===
+            String(categoriaId)
+        ) ||
+        recorrencias.some(recorrencia =>
+            String(recorrencia.categoriaId) ===
+            String(categoriaId)
+        )
+    );
+}
+
+function categoriaPossuiRecorrenciaEmAberto(
+    categoriaId
+) {
+    return recorrencias.some(recorrencia => {
+        return (
+            String(recorrencia.categoriaId) ===
+                String(categoriaId) &&
+            recorrencia.status !== 'encerrada' &&
+            !recorrencia.arquivada
+        );
+    });
+}
+
+function obterFilhasAtivas(categoriaId) {
+    return categorias.filter(categoria => {
+        return (
+            categoria.ativa &&
+            String(categoria.categoriaPaiId) ===
+                String(categoriaId)
+        );
+    });
+}
+
+function renderizarCategorias() {
+    if (!categoriasLista) return;
+
+    const ativas = categorias.filter(
+        categoria =>
+            categoria.ativa &&
+            !categoria.arquivada
+    ).length;
+
+    const inativas = categorias.filter(
+        categoria =>
+            !categoria.ativa &&
+            !categoria.arquivada
+    ).length;
+
+    const arquivadas = categorias.filter(
+        categoria => categoria.arquivada
+    ).length;
+
+    document.getElementById(
+        'totalCategoriasAtivas'
+    ).textContent = ativas;
+
+    document.getElementById(
+        'totalCategoriasInativas'
+    ).textContent = inativas;
+
+    document.getElementById(
+        'totalCategoriasArquivadas'
+    ).textContent = arquivadas;
+
+    categoriasLista.innerHTML = '';
+
+    const categoriasVisiveis =
+        categorias.filter(categoria => {
+            if (filtroCategoriasAtual === 'todas') {
+                return true;
+            }
+
+            if (filtroCategoriasAtual === 'arquivadas') {
+                return categoria.arquivada;
+            }
+
+            if (categoria.arquivada) {
+                return false;
+            }
+
+            if (filtroCategoriasAtual === 'inativas') {
+                return !categoria.ativa;
+            }
+
+            return categoria.ativa;
+        });
+
+    if (categoriasVazio) {
+        categoriasVazio.hidden =
+            categoriasVisiveis.length > 0;
+    }
+
+    const ordenadas = [...categoriasVisiveis].sort(
+        (a, b) => {
+            if (a.ativa !== b.ativa) {
+                return a.ativa ? -1 : 1;
+            }
+
+            if (a.tipo !== b.tipo) {
+                return a.tipo.localeCompare(b.tipo);
+            }
+
+            return a.nome.localeCompare(
+                b.nome,
+                'pt-BR'
+            );
+        }
+    );
+
+    ordenadas.forEach(categoria => {
+        const pai = categoria.categoriaPaiId
+            ? obterCategoriaPorId(
+                categoria.categoriaPaiId
+            )
+            : null;
+
+        const icone = obterIconeCategoria(
+            categoria.icone
+        );
+
+        const cor = obterCorCategoriaSegura(
+            categoria.cor
+        );
+
+        categoriasLista.insertAdjacentHTML(
+            'beforeend',
+            `
+                <article
+                    class="categoria-card ${categoria.ativa ? '' : 'is-inativa'} ${categoria.arquivada ? 'is-arquivada' : ''}"
+                    style="--categoria-cor: ${cor};"
+                >
+                    <div class="categoria-card-topo">
+                        <div class="categoria-identidade">
+                            <span class="categoria-icone">
+                                <i class="fa-solid ${icone}"></i>
+                            </span>
+
+                            <div>
+                                <h3>${escaparHTML(categoria.nome)}</h3>
+                                <p>
+                                    ${escaparHTML(obterTextoTipoCategoria(categoria.tipo))}
+                                    ${pai ? ` · ${escaparHTML(pai.nome)}` : ''}
+                                    ${categoria.sistema ? ' · Padrão' : ''}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="categoria-acoes">
+                        ${
+                            categoria.arquivada
+                                ? `
+                                    <button
+                                        type="button"
+                                        class="btn-categoria-acao"
+                                        data-acao-categoria="restaurar"
+                                        data-categoria-id="${escaparHTML(categoria.id)}"
+                                    >
+                                        Restaurar
+                                    </button>
+                                `
+                                : `
+                                    <button
+                                        type="button"
+                                        class="btn-categoria-acao"
+                                        data-acao-categoria="editar"
+                                        data-categoria-id="${escaparHTML(categoria.id)}"
+                                    >
+                                        Editar
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="btn-categoria-acao"
+                                        data-acao-categoria="${categoria.ativa ? 'desativar' : 'reativar'}"
+                                        data-categoria-id="${escaparHTML(categoria.id)}"
+                                    >
+                                        ${categoria.ativa ? 'Desativar' : 'Reativar'}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="btn-categoria-acao"
+                                        data-acao-categoria="arquivar"
+                                        data-categoria-id="${escaparHTML(categoria.id)}"
+                                    >
+                                        Arquivar
+                                    </button>
+                                `
+                        }
+
+                        <button
+                            type="button"
+                            class="btn-categoria-acao btn-categoria-perigo"
+                            data-acao-categoria="excluir"
+                            data-categoria-id="${escaparHTML(categoria.id)}"
+                        >
+                            Excluir
+                        </button>
+                    </div>
+                </article>
+            `
+        );
+    });
+}
+
+function preencherCategoriasPai(
+    tipo,
+    categoriaAtualId = null,
+    categoriaPaiSelecionadaId = null
+) {
+    categoriaPai.innerHTML =
+        '<option value="">Nenhuma</option>';
+
+    categorias
+        .filter(categoria => {
+            return (
+                categoria.ativa &&
+                categoria.tipo === tipo &&
+                categoria.categoriaPaiId === null &&
+                String(categoria.id) !==
+                    String(categoriaAtualId)
+            );
+        })
+        .sort((a, b) =>
+            a.nome.localeCompare(b.nome, 'pt-BR')
+        )
+        .forEach(categoria => {
+            const option =
+                document.createElement('option');
+
+            option.value = categoria.id;
+            option.textContent = categoria.nome;
+            categoriaPai.appendChild(option);
+        });
+
+    if (categoriaPaiSelecionadaId) {
+        categoriaPai.value =
+            String(categoriaPaiSelecionadaId);
+    }
+}
+
+function abrirModalCategoria(categoria = null) {
+    categoriaEmEdicaoId.value =
+        categoria ? categoria.id : '';
+
+    nomeCategoria.value =
+        categoria ? categoria.nome : '';
+
+    tipoCategoria.value =
+        categoria ? categoria.tipo : 'variavel';
+
+    iconeCategoria.value =
+        categoria &&
+        ICONES_CATEGORIA[categoria.icone]
+            ? categoria.icone
+            : 'tag';
+
+    const corSegura = categoria
+        ? obterCorCategoriaSegura(categoria.cor)
+        : '#d9ad26';
+
+    corCategoria.value = [
+        ...corCategoria.options
+    ].some(option => option.value === corSegura)
+        ? corSegura
+        : '#8f99a8';
+
+    preencherCategoriasPai(
+        tipoCategoria.value,
+        categoria ? categoria.id : null,
+        categoria
+            ? categoria.categoriaPaiId
+            : null
+    );
+
+    document.getElementById(
+        'tituloModalCategoria'
+    ).textContent = categoria
+        ? 'Editar categoria'
+        : 'Nova categoria';
+
+    document.getElementById(
+        'btnSalvarCategoria'
+    ).textContent = categoria
+        ? 'Salvar alterações'
+        : 'Criar categoria';
+
+    modalCategoria.style.display = 'flex';
+    modalCategoria.setAttribute(
+        'aria-hidden',
+        'false'
+    );
+
+    setTimeout(() => nomeCategoria.focus(), 50);
+}
+
+function fecharModalCategoria() {
+    modalCategoria.style.display = 'none';
+    modalCategoria.setAttribute(
+        'aria-hidden',
+        'true'
+    );
+    categoriaEmEdicaoId.value = '';
+}
+
+function gerarIdCategoria() {
+    if (
+        window.crypto &&
+        typeof window.crypto.randomUUID ===
+            'function'
+    ) {
+        return window.crypto.randomUUID();
+    }
+
+    return (
+        `categoria-${Date.now()}-` +
+        `${Math.floor(Math.random() * 100000)}`
+    );
+}
+
+function salvarCategoria() {
+    const nome = nomeCategoria.value.trim();
+    const tipo = tipoCategoria.value;
+    const categoriaPaiId =
+        categoriaPai.value || null;
+    const icone = iconeCategoria.value;
+    const cor = corCategoria.value;
+    const idEmEdicao =
+        categoriaEmEdicaoId.value;
+
+    if (!nome) {
+        mostrarToast(
+            'Informe o nome da categoria.',
+            'aviso'
+        );
+        nomeCategoria.focus();
+        return;
+    }
+
+    if (
+        !['salario', 'fixo', 'variavel']
+            .includes(tipo)
+    ) {
+        mostrarToast(
+            'Selecione um tipo válido.',
+            'erro'
+        );
+        return;
+    }
+
+    if (!ICONES_CATEGORIA[icone]) {
+        mostrarToast(
+            'Selecione um ícone válido.',
+            'erro'
+        );
+        return;
+    }
+
+    if (!/^#[0-9a-f]{6}$/i.test(cor)) {
+        mostrarToast(
+            'Selecione uma cor válida.',
+            'erro'
+        );
+        return;
+    }
+
+    const pai = categoriaPaiId
+        ? obterCategoriaPorId(categoriaPaiId)
+        : null;
+
+    if (
+        categoriaPaiId &&
+        (
+            !pai ||
+            !pai.ativa ||
+            pai.tipo !== tipo ||
+            pai.categoriaPaiId !== null
+        )
+    ) {
+        mostrarToast(
+            'Selecione uma categoria principal válida.',
+            'aviso'
+        );
+        return;
+    }
+
+    const duplicada = categorias.some(
+        categoria => {
+            return (
+                String(categoria.id) !==
+                    String(idEmEdicao) &&
+                categoria.tipo === tipo &&
+                String(
+                    categoria.categoriaPaiId || ''
+                ) === String(
+                    categoriaPaiId || ''
+                ) &&
+                categoria.nome.toLocaleLowerCase(
+                    'pt-BR'
+                ) === nome.toLocaleLowerCase(
+                    'pt-BR'
+                )
+            );
+        }
+    );
+
+    if (duplicada) {
+        mostrarToast(
+            'Já existe uma categoria com esse nome neste grupo.',
+            'aviso'
+        );
+        nomeCategoria.focus();
+        return;
+    }
+
+    if (idEmEdicao) {
+        const categoria = obterCategoriaPorId(
+            idEmEdicao
+        );
+
+        if (!categoria) {
+            mostrarToast(
+                'Categoria não encontrada.',
+                'erro'
+            );
+            fecharModalCategoria();
+            return;
+        }
+
+        if (
+            categoria.tipo !== tipo &&
+            categoriaEstaEmUso(categoria.id)
+        ) {
+            mostrarToast(
+                'O tipo não pode ser alterado porque a categoria já está em uso.',
+                'aviso'
+            );
+            return;
+        }
+
+        const possuiSubcategorias =
+            categorias.some(item => {
+                return String(
+                    item.categoriaPaiId
+                ) === String(categoria.id);
+            });
+
+        if (
+            possuiSubcategorias &&
+            (
+                categoriaPaiId ||
+                categoria.tipo !== tipo
+            )
+        ) {
+            mostrarToast(
+                'Uma categoria com subcategorias não pode virar subcategoria nem mudar de tipo.',
+                'aviso'
+            );
+            return;
+        }
+
+        categoria.nome = nome;
+        categoria.tipo = tipo;
+        categoria.categoriaPaiId =
+            categoriaPaiId;
+        categoria.icone = icone;
+        categoria.cor = cor;
+        categoria.atualizadaEm =
+            new Date().toISOString();
+    } else {
+        categorias.push({
+            id: gerarIdCategoria(),
+            nome,
+            tipo,
+            categoriaPaiId,
+            icone,
+            cor,
+            ativa: true,
+            arquivada: false,
+            sistema: false,
+            criadaEm: new Date().toISOString(),
+            atualizadaEm:
+                new Date().toISOString()
+        });
+    }
+
+    salvarNoBanco();
+    fecharModalCategoria();
+    renderizarTela();
+
+    mostrarToast(
+        idEmEdicao
+            ? 'Categoria atualizada.'
+            : 'Categoria criada.',
+        'sucesso'
+    );
+}
+
+document.getElementById(
+    'btnNovaCategoria'
+).addEventListener(
+    'click',
+    () => abrirModalCategoria()
+);
+
+document.getElementById(
+    'btnSalvarCategoria'
+).addEventListener(
+    'click',
+    salvarCategoria
+);
+
+document.getElementById(
+    'btnCancelarCategoria'
+).addEventListener(
+    'click',
+    fecharModalCategoria
+);
+
+document.getElementById(
+    'btnFecharModalCategoria'
+).addEventListener(
+    'click',
+    fecharModalCategoria
+);
+
+tipoCategoria.addEventListener(
+    'change',
+    () => {
+        preencherCategoriasPai(
+            tipoCategoria.value,
+            categoriaEmEdicaoId.value || null
+        );
+    }
+);
+
+modalCategoria.addEventListener(
+    'click',
+    evento => {
+        if (evento.target === modalCategoria) {
+            fecharModalCategoria();
+        }
+    }
+);
+
+categoriasLista.addEventListener(
+    'click',
+    evento => {
+        const botao = evento.target.closest(
+            '[data-acao-categoria][data-categoria-id]'
+        );
+
+        if (!botao) return;
+
+        const categoria = obterCategoriaPorId(
+            botao.dataset.categoriaId
+        );
+
+        if (!categoria) {
+            mostrarToast(
+                'Categoria não encontrada.',
+                'erro'
+            );
+            return;
+        }
+
+        const acao =
+            botao.dataset.acaoCategoria;
+
+        if (acao === 'editar') {
+            abrirModalCategoria(categoria);
+            return;
+        }
+
+        if (acao === 'arquivar') {
+            const filhasAtivas =
+                obterFilhasAtivas(categoria.id);
+
+            if (filhasAtivas.length > 0) {
+                mostrarToast(
+                    'Arquive ou desative primeiro as subcategorias vinculadas.',
+                    'aviso'
+                );
+                return;
+            }
+
+            if (
+                categoriaPossuiRecorrenciaEmAberto(
+                    categoria.id
+                )
+            ) {
+                mostrarToast(
+                    'Encerre ou arquive primeiro as recorrências desta categoria.',
+                    'aviso'
+                );
+                return;
+            }
+
+            categoria.ativa = false;
+            categoria.arquivada = true;
+            categoria.atualizadaEm =
+                new Date().toISOString();
+
+            salvarNoBanco();
+            renderizarTela();
+            mostrarToast(
+                'Categoria arquivada. O histórico foi preservado.',
+                'sucesso'
+            );
+            return;
+        }
+
+        if (acao === 'restaurar') {
+            if (categoria.categoriaPaiId) {
+                const pai = obterCategoriaPorId(
+                    categoria.categoriaPaiId
+                );
+
+                if (
+                    !pai ||
+                    pai.arquivada ||
+                    !pai.ativa
+                ) {
+                    mostrarToast(
+                        'Restaure ou reative primeiro a categoria principal.',
+                        'aviso'
+                    );
+                    return;
+                }
+            }
+
+            categoria.arquivada = false;
+            categoria.ativa = true;
+            categoria.atualizadaEm =
+                new Date().toISOString();
+
+            salvarNoBanco();
+            renderizarTela();
+            mostrarToast(
+                'Categoria restaurada e reativada.',
+                'sucesso'
+            );
+            return;
+        }
+
+        if (acao === 'excluir') {
+            const possuiFilhas =
+                categorias.some(item =>
+                    String(item.categoriaPaiId) ===
+                    String(categoria.id)
+                );
+
+            if (categoria.sistema) {
+                mostrarToast(
+                    'Categorias padrão podem ser arquivadas, mas não excluídas.',
+                    'aviso'
+                );
+                return;
+            }
+
+            if (
+                categoriaEstaEmUso(categoria.id) ||
+                possuiFilhas
+            ) {
+                mostrarToast(
+                    'Esta categoria possui vínculos. Arquive-a para esconder sem danificar os dados.',
+                    'aviso'
+                );
+                return;
+            }
+
+            const confirmou = confirm(
+                `Excluir definitivamente a categoria "${categoria.nome}"?`
+            );
+
+            if (!confirmou) return;
+
+            categorias = categorias.filter(
+                item =>
+                    String(item.id) !==
+                    String(categoria.id)
+            );
+
+            salvarNoBanco();
+            renderizarTela();
+            mostrarToast(
+                'Categoria excluída definitivamente.',
+                'sucesso'
+            );
+            return;
+        }
+
+        if (acao === 'desativar') {
+            const filhasAtivas =
+                obterFilhasAtivas(categoria.id);
+
+            if (filhasAtivas.length > 0) {
+                mostrarToast(
+                    'Desative primeiro as subcategorias vinculadas.',
+                    'aviso'
+                );
+                return;
+            }
+
+            if (
+                categoriaPossuiRecorrenciaEmAberto(
+                    categoria.id
+                )
+            ) {
+                mostrarToast(
+                    'Esta categoria está em uma recorrência ativa ou pausada. Edite ou encerre a recorrência primeiro.',
+                    'aviso'
+                );
+                return;
+            }
+
+            categoria.ativa = false;
+        }
+
+        if (acao === 'reativar') {
+            if (categoria.categoriaPaiId) {
+                const pai = obterCategoriaPorId(
+                    categoria.categoriaPaiId
+                );
+
+                if (!pai || !pai.ativa) {
+                    mostrarToast(
+                        'Reative primeiro a categoria principal.',
+                        'aviso'
+                    );
+                    return;
+                }
+            }
+
+            categoria.ativa = true;
+        }
+
+        categoria.atualizadaEm =
+            new Date().toISOString();
+
+        salvarNoBanco();
+        renderizarTela();
+
+        mostrarToast(
+            categoria.ativa
+                ? 'Categoria reativada.'
+                : 'Categoria desativada. O histórico foi preservado.',
+            'sucesso'
+        );
+    }
+);
+
+if (filtroCategorias) {
+    filtroCategorias.addEventListener(
+        'change',
+        evento => {
+            filtroCategoriasAtual =
+                evento.target.value;
+            renderizarCategorias();
+        }
+    );
+}
+
+document.addEventListener(
+    'keydown',
+    evento => {
+        if (
+            evento.key === 'Escape' &&
+            modalCategoria.style.display ===
+                'flex'
+        ) {
+            fecharModalCategoria();
+        }
+    }
+);
