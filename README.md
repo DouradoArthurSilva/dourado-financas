@@ -1,6 +1,12 @@
 # Dourado Finanças
 
-Dourado Finanças é um sistema de organização financeira pessoal desenvolvido como projeto de estudo utilizando HTML, CSS e JavaScript puro.
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/50958d17-2e4d-4fd0-8155-a74213aa9886" alt="Dourado Finanças">
+</p>
+
+Sistema web de organização financeira pessoal desenvolvido em HTML, CSS e JavaScript puro.
+
+Projeto criado com foco em aprendizado de desenvolvimento web, organização de código e experiência do usuário.
 
 A ideia do projeto é permitir que o usuário controle receitas, despesas, contas, cartões, metas financeiras e acompanhe sua situação financeira de forma simples e organizada.
 
