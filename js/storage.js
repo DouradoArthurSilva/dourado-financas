@@ -1,7 +1,13 @@
+// Aqui ficam os dados do sistema. Como o projeto não tem backend ainda,
+// uso o LocalStorage para não perder as informações quando atualizar a página.
+// Também normalizo os dados antigos para evitar quebrar quem já estava usando.
+
 // ==========================================
 // 0. BANCO DE DADOS (LOCALSTORAGE) E ESTADO
 // ==========================================
 
+// Leitura segura: se algum JSON estiver corrompido, uso um valor padrão
+// em vez de travar a aplicação inteira.
 function lerJSONLocalStorage(chave, valorPadrao) {
     const valorSalvo = localStorage.getItem(chave);
 
@@ -29,6 +35,7 @@ function obterCompetenciaAtual() {
     return `${ano}-${mes}`;
 }
 
+// Deixo a competência sempre no formato AAAA-MM.
 function normalizarCompetencia(valor, valorPadrao = '') {
     const competencia = String(valor || '').slice(0, 7);
 
@@ -83,6 +90,7 @@ const contasPadrao = [{
     atualizadaEm: new Date().toISOString()
 }];
 
+// Completa campos que não existiam nas versões antigas do projeto.
 function normalizarConta(conta, indice) {
     const dados = conta && typeof conta === 'object'
         ? conta
@@ -137,6 +145,7 @@ let contas = (
         : contasPadrao
 ).map(normalizarConta);
 
+// Mesma ideia das contas: manter compatibilidade com dados antigos.
 function normalizarCartao(cartao, indice) {
     const dados =
         cartao && typeof cartao === 'object'
@@ -624,33 +633,28 @@ let recorrencias = Array.isArray(recorrenciasSalvas)
     : [];
 
 function salvarNoBanco() {
-    localStorage.setItem(
-        'dourado_transacoes',
-        JSON.stringify(transacoes)
-    );
+    try {
+        const dados = {
+            dourado_transacoes: transacoes,
+            dourado_caixinhas: caixinhas,
+            dourado_recorrencias: recorrencias,
+            dourado_categorias: categorias,
+            dourado_contas: contas,
+            dourado_cartoes: cartoes
+        };
 
-    localStorage.setItem(
-        'dourado_caixinhas',
-        JSON.stringify(caixinhas)
-    );
+        Object.entries(dados).forEach(([chave, valor]) => {
+            localStorage.setItem(chave, JSON.stringify(valor));
+        });
 
-    localStorage.setItem(
-        'dourado_recorrencias',
-        JSON.stringify(recorrencias)
-    );
+        localStorage.setItem(
+            'dourado_ultimo_salvamento',
+            new Date().toISOString()
+        );
 
-    localStorage.setItem(
-        'dourado_categorias',
-        JSON.stringify(categorias)
-    );
-
-    localStorage.setItem(
-        'dourado_contas',
-        JSON.stringify(contas)
-    );
-
-    localStorage.setItem(
-        'dourado_cartoes',
-        JSON.stringify(cartoes)
-    );
+        return true;
+    } catch (erro) {
+        console.error('Não foi possível salvar os dados.', erro);
+        throw erro;
+    }
 }

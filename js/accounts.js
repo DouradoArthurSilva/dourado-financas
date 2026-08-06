@@ -1,3 +1,7 @@
+// Parte das contas bancárias.
+// A ideia aqui é sempre calcular o saldo pelas movimentações, em vez de salvar
+// um saldo solto que poderia ficar diferente do histórico.
+
 let filtroContasAtual = 'ativas';
 
 function obterContaPorId(id) {
@@ -12,6 +16,7 @@ function obterContasAtivas() {
     );
 }
 
+// O saldo nasce do saldo inicial e depois percorre todas as movimentações.
 function calcularSaldoConta(id) {
     const conta = obterContaPorId(id);
     let saldo = conta
@@ -66,6 +71,7 @@ function preencherSeletorContas(seletor, selecionadaId = null) {
     }
 }
 
+// Antes de excluir, confiro se a conta aparece em alguma parte do sistema.
 function contaEstaEmUso(id) {
     return transacoes.some(t =>
         [t.contaId, t.contaOrigemId, t.contaDestinoId]
@@ -110,10 +116,10 @@ function renderizarContas() {
                 <strong class="${saldo < 0 ? 'text-red' : ''}">R$ ${formatarMoeda(saldo)}</strong>
                 <div class="conta-acoes">
                     ${conta.arquivada
-                        ? `<button data-acao-conta="restaurar" data-conta-id="${escaparHTML(conta.id)}">Restaurar</button>`
-                        : `<button data-acao-conta="editar" data-conta-id="${escaparHTML(conta.id)}">Editar</button>
-                           <button data-acao-conta="arquivar" data-conta-id="${escaparHTML(conta.id)}">Arquivar</button>`}
-                    <button class="conta-acao-perigo" data-acao-conta="excluir" data-conta-id="${escaparHTML(conta.id)}">Excluir</button>
+                        ? `<button type="button" data-acao-conta="restaurar" data-conta-id="${escaparHTML(conta.id)}">Restaurar</button>`
+                        : `<button type="button" data-acao-conta="editar" data-conta-id="${escaparHTML(conta.id)}">Editar</button>
+                           <button type="button" data-acao-conta="arquivar" data-conta-id="${escaparHTML(conta.id)}">Arquivar</button>`}
+                    <button type="button" class="conta-acao-perigo" data-acao-conta="excluir" data-conta-id="${escaparHTML(conta.id)}">Excluir</button>
                 </div>
             </article>
         `);

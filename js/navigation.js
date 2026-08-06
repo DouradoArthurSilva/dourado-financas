@@ -1,3 +1,6 @@
+// Navegação entre as telas do sistema.
+// Em vez de recarregar outra página, eu escondo e mostro as seções pelo hash da URL.
+
 const AREAS_APLICACAO = {
     'visao-geral': {
         titulo: 'Visão geral',
@@ -33,9 +36,15 @@ const AREAS_APLICACAO = {
         titulo: 'Relatórios',
         descricao:
             'Entenda como seus gastos estão distribuídos no mês.'
+    },
+    dados: {
+        titulo: 'Dados',
+        descricao:
+            'Exporte e restaure uma cópia segura das suas informações.'
     }
 };
 
+// Primeiro tento abrir a tela que veio na URL; se não tiver, uso a última salva.
 function obterAreaInicial() {
     const areaHash = window.location.hash
         .replace('#', '');
@@ -53,6 +62,7 @@ function obterAreaInicial() {
         : 'visao-geral';
 }
 
+// Troca a área visível e atualiza o menu sem recarregar a página.
 function navegarParaArea(
     area,
     atualizarEndereco = true
@@ -135,6 +145,13 @@ function navegarParaArea(
         ) {
             graficoCategorias.resize();
         }
+
+        if (
+            area === 'dados' &&
+            typeof atualizarResumoBackup === 'function'
+        ) {
+            atualizarResumoBackup();
+        }
     });
 
     window.scrollTo({
@@ -167,3 +184,21 @@ navegarParaArea(
     obterAreaInicial(),
     false
 );
+
+// Ações contextuais reutilizam os fluxos já validados do sistema.
+document.addEventListener('click', evento => {
+    const acionador = evento.target.closest('[data-proxy-click]');
+    if (!acionador) return;
+
+    const seletor = acionador.dataset.proxyClick;
+    const destino = document.querySelector(seletor);
+
+    if (!destino) {
+        if (typeof mostrarToast === 'function') {
+            mostrarToast('Esta ação não está disponível no momento.', 'aviso');
+        }
+        return;
+    }
+
+    destino.click();
+});

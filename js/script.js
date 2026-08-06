@@ -1,75 +1,71 @@
 
-    // ==========================================
-    // ==========================================
-// CONFIGURAÇÃO DO GRÁFICO (CHART.JS)
 // ==========================================
+// CONFIGURAÇÃO INICIAL E GRÁFICOS
+// ==========================================
+// Começo os gráficos aqui, mas deixei uma proteção para o sistema continuar
+// funcionando mesmo se a biblioteca do Chart.js não carregar.
 let graficoApp;
 let graficoCategorias;
 
-window.onload = function () {
-    const canvasGrafico = document.getElementById('graficoResumo');
+// Esta é a entrada principal do sistema. Preferi colocar try/catch porque
+// um problema no gráfico não deve impedir o usuário de acessar os próprios dados.
+// Mede o cabeçalho em vez de usar um número fixo no CSS.
+// Assim a barra de navegação encosta certinho nele, mesmo mudando a tela.
+function atualizarAlturaCabecalhoFixo() {
+    const cabecalho = document.querySelector('.main-header');
+    const telaPequena = window.matchMedia('(max-width: 820px)').matches;
 
-    if (canvasGrafico) {
-        const ctx = canvasGrafico.getContext('2d');
+    const altura = cabecalho && !telaPequena
+        ? Math.ceil(cabecalho.getBoundingClientRect().height)
+        : 0;
 
-        graficoApp = new Chart(ctx, {
-            type: 'doughnut',
+    document.documentElement.style.setProperty(
+        '--altura-cabecalho-fixo',
+        `${altura}px`
+    );
+}
 
-            data: {
-                labels: [
-                    'Despesas',
-                    'Guardado',
-                    'Sobra disponível'
-                ],
+function inicializarAplicacao() {
+    atualizarAlturaCabecalhoFixo();
 
-                datasets: [{
-                    data: [0, 0, 100],
+    try {
+        const canvasGrafico = document.getElementById('graficoResumo');
 
-                    backgroundColor: [
-                        '#e74c3c',
-                        '#3498db',
-                        '#27ae60'
-                    ],
-
-                    borderWidth: 2
-                }]
-            },
-
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '75%',
-
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-
-                        labels: {
-                            color: '#FFFFFF',
-
-                            font: {
-                                size: 14,
-                                weight: '600'
-                            },
-
-                            padding: 20,
-                            boxWidth: 18,
-                            boxHeight: 18
+        if (canvasGrafico && typeof Chart !== 'undefined') {
+            graficoApp = new Chart(canvasGrafico.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Despesas', 'Guardado', 'Sobra disponível'],
+                    datasets: [{
+                        data: [0, 0, 100],
+                        backgroundColor: ['#e74c3c', '#3498db', '#27ae60'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#FFFFFF',
+                                font: { size: 14, weight: '600' },
+                                padding: 20,
+                                boxWidth: 18,
+                                boxHeight: 18
+                            }
                         }
                     }
                 }
-            }
-        });
-    }
+            });
+        }
 
-    const canvasCategorias = document.getElementById(
-        'graficoCategorias'
-    );
+        const canvasCategorias = document.getElementById('graficoCategorias');
 
-    if (canvasCategorias) {
-        graficoCategorias = new Chart(
-            canvasCategorias.getContext('2d'),
-            {
+        if (canvasCategorias && typeof Chart !== 'undefined') {
+            graficoCategorias = new Chart(canvasCategorias.getContext('2d'), {
                 type: 'doughnut',
                 data: {
                     labels: [],
@@ -86,46 +82,70 @@ window.onload = function () {
                     maintainAspectRatio: false,
                     cutout: '66%',
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label(contexto) {
-                                    const valor =
-                                        Number(contexto.raw) || 0;
-
-                                    return (
-                                        `${contexto.label}: ` +
-                                        `R$ ${formatarMoeda(valor)}`
-                                    );
+                                    const valor = Number(contexto.raw) || 0;
+                                    return `${contexto.label}: R$ ${formatarMoeda(valor)}`;
                                 }
                             }
                         }
                     }
                 }
-            }
-        );
+            });
+        }
+
+        const recorrenciasGeradas = processarRecorrenciasMensais();
+        renderizarTela();
+
+        if (recorrenciasGeradas > 0) {
+            mostrarToast(
+                recorrenciasGeradas === 1
+                    ? '1 lançamento recorrente foi gerado.'
+                    : `${recorrenciasGeradas} lançamentos recorrentes foram gerados.`,
+                'info'
+            );
+        }
+
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js não foi carregado. O sistema continuará funcionando sem os gráficos.');
+        }
+    } catch (erro) {
+        console.error('Falha ao iniciar o Dourado Finanças.', erro);
+
+        try {
+            renderizarTela();
+            mostrarToast(
+                'O sistema iniciou com recursos visuais limitados. Seus dados permanecem disponíveis.',
+                'aviso'
+            );
+        } catch (erroRenderizacao) {
+            console.error('Falha crítica de renderização.', erroRenderizacao);
+            alert('Não foi possível iniciar o Dourado Finanças. Atualize a página. Seus dados continuam salvos neste navegador.');
+        }
     }
-
-  const recorrenciasGeradas =
-    processarRecorrenciasMensais();
-
-renderizarTela();
-
-if (recorrenciasGeradas > 0) {
-    mostrarToast(
-        recorrenciasGeradas === 1
-            ? '1 lançamento recorrente foi gerado.'
-            : `${recorrenciasGeradas} lançamentos recorrentes foram gerados.`,
-        'info'
-    );
 }
-};
 
-    // ==========================================
-    // 1. ELEMENTOS DA TELA
-    // ==========================================
+window.addEventListener('resize', atualizarAlturaCabecalhoFixo);
+window.addEventListener('load', inicializarAplicacao);
+
+const observadorCabecalho = typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(atualizarAlturaCabecalhoFixo)
+    : null;
+
+const cabecalhoPrincipal = document.querySelector('.main-header');
+
+if (observadorCabecalho && cabecalhoPrincipal) {
+    observadorCabecalho.observe(cabecalhoPrincipal);
+}
+
+
+// ==========================================
+// 1. ELEMENTOS DA TELA
+// ==========================================
+// Guardo as referências dos elementos em um objeto para não ficar procurando
+// o mesmo ID toda hora no documento.
 const elementos = {
     recorrenciasLista: document.getElementById(
         'recorrenciasLista'
@@ -233,11 +253,25 @@ btnConfirmarExclusaoCaixinha: document.getElementById(
     painelGuardado: document.getElementById('painelGuardado'),
     painelFixo: document.getElementById('painelFixo'),
     painelVariavel: document.getElementById('painelVariavel'),
+    saldoDisponivelHome: document.getElementById('saldoDisponivelHome'),
+    mensagemSaldoHome: document.getElementById('mensagemSaldoHome'),
+    homeOnboarding: document.getElementById('homeOnboarding'),
+    homeInsight: document.getElementById('homeInsight'),
+    assistenteFinanceiroGrid: document.getElementById('assistenteFinanceiroGrid'),
+    timelineHistorico: document.getElementById('timelineHistorico'),
+    userGreeting: document.getElementById('userGreeting'),
+    achievementOverlay: document.getElementById('achievementOverlay'),
+    achievementTitle: document.getElementById('achievementTitle'),
+    achievementMessage: document.getElementById('achievementMessage'),
+    btnFecharConquista: document.getElementById('btnFecharConquista'),
+    graficoResumoVazio: document.getElementById('graficoResumoVazio'),
+    graficoResumoCanvas: document.getElementById('graficoResumo'),
 
    modalOverlay: document.getElementById('modalLancamento'),
 sobraFlutuante: document.querySelector('.sobra-flutuante')
 };
 
+// Esses filtros ficam separados para facilitar a atualização do histórico.
 const estadoHistorico = {
     filtro: 'todos',
     pesquisa: '',
@@ -249,6 +283,8 @@ const estadoHistorico = {
 let competenciaPainelSelecionada =
     obterCompetenciaAtual();
 
+// Competência é o mês financeiro do lançamento (ex.: 2026-08).
+// Ela pode ser diferente do dia em que o registro foi criado.
 function obterCompetenciaTransacao(transacao) {
     return (
         normalizarCompetencia(
@@ -590,6 +626,44 @@ function gerarIdUnico() {
             `💡 Em <strong>${nomeMesAtual}</strong>, você gastou <strong>R$ ${formatarMoeda(Math.abs(diferenca))} ${movimento}</strong> em gastos variáveis do que em ${nomeMesAnterior}. ${mensagemFinal}`;
     }
 
+    function obterApresentacaoValorTransacao(transacao) {
+        const apresentacoes = {
+            salario: {
+                sinal: '+',
+                classe: 'amount-pos'
+            },
+            fixo: {
+                sinal: '-',
+                classe: 'amount-neg'
+            },
+            variavel: {
+                sinal: '-',
+                classe: 'amount-neg'
+            },
+            pagamento_fatura: {
+                sinal: '-',
+                classe: 'amount-neg'
+            },
+            guardado: {
+                sinal: '→',
+                classe: 'amount-transfer'
+            },
+            resgate: {
+                sinal: '←',
+                classe: 'amount-transfer'
+            },
+            transferencia: {
+                sinal: '↔',
+                classe: 'amount-transfer'
+            }
+        };
+
+        return apresentacoes[transacao.tipo] || {
+            sinal: transacao.sinal || '',
+            classe: transacao.classeCor || ''
+        };
+    }
+
     function renderizarHistorico() {
         if (!elementos.tbodyHistorico) return;
 
@@ -600,6 +674,9 @@ function gerarIdUnico() {
         elementos.tbodyHistorico.innerHTML = '';
 
         transacoesFiltradas.forEach(transacao => {
+            const apresentacaoValor =
+                obterApresentacaoValorTransacao(transacao);
+
             const permiteAlterarStatus =
                 (
                     transacao.tipo === 'fixo' ||
@@ -658,8 +735,8 @@ function gerarIdUnico() {
                 </td>
                 <td><span class="category-label category-${escaparHTML(transacao.tipo)}">${escaparHTML(transacao.categoriaText)}</span></td>
                 <td>${statusHTML}</td>
-                <td class="${escaparHTML(transacao.classeCor)} history-value-cell">
-                    <span>${escaparHTML(transacao.sinal)} R$ ${formatarMoeda(transacao.valor)}</span>
+                <td class="${escaparHTML(apresentacaoValor.classe)} history-value-cell">
+                    <span>${escaparHTML(apresentacaoValor.sinal)} R$ ${formatarMoeda(transacao.valor)}</span>
                     <button type="button" class="btn-excluir" title="Excluir lançamento" aria-label="Excluir lançamento">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
@@ -682,6 +759,34 @@ function gerarIdUnico() {
 
         if (elementos.historicoVazio) {
             elementos.historicoVazio.hidden = quantidade > 0;
+        }
+
+        if (elementos.timelineHistorico && window.DouradoHistorico) {
+            window.DouradoHistorico.render({
+                container: elementos.timelineHistorico,
+                transacoes: transacoesFiltradas,
+                formatarMoeda,
+                escaparHTML,
+                obterApresentacao: obterApresentacaoValorTransacao,
+                obterContaPorId,
+                obterPagamentoFatura,
+                onStatus: idTransacao => {
+                    const transacao = transacoes.find(item => Number(item.id) === Number(idTransacao));
+                    if (!transacao) return;
+                    transacao.isPago = !transacao.isPago;
+                    salvarNoBanco();
+                    renderizarTela();
+                    mostrarToast(`Lançamento marcado como ${transacao.isPago ? 'pago' : 'pendente'}.`, 'info');
+                },
+                onExcluir: idTransacao => {
+                    const confirmou = confirm('Deseja excluir este lançamento? Esta ação não poderá ser desfeita.');
+                    if (!confirmou) return;
+                    transacoes = transacoes.filter(item => Number(item.id) !== Number(idTransacao));
+                    salvarNoBanco();
+                    renderizarTela();
+                    mostrarToast('Lançamento excluído com sucesso.', 'sucesso');
+                }
+            });
         }
 
         atualizarComparacaoMensal();
@@ -1118,6 +1223,12 @@ function renderizarRecorrencias() {
                         </span>
                     </div>
 
+                    ${
+                        window.DouradoRecorrencias
+                            ? `<div class="recorrencia-proxima"><i class="fa-regular fa-calendar-check"></i><span>Próxima ocorrência</span><strong>${escaparHTML(window.DouradoRecorrencias.formatarData(window.DouradoRecorrencias.proximaCompetencia(recorrencia)))}</strong></div>`
+                            : ''
+                    }
+
                     <div class="recorrencia-detalhes">
                         <div class="recorrencia-detalhe">
                             <span>Valor</span>
@@ -1381,6 +1492,70 @@ function renderizarRelatorioCategorias() {
     }
 }
 
+    function obterSaudacaoAtual() {
+        const hora = new Date().getHours();
+
+        if (hora < 12) return 'Bom dia';
+        if (hora < 18) return 'Boa tarde';
+        return 'Boa noite';
+    }
+
+    function atualizarResumoInteligente() {
+        if (elementos.userGreeting) {
+            elementos.userGreeting.textContent = `${obterSaudacaoAtual()}, Arthur Dourado`;
+        }
+
+        if (!elementos.homeInsight) return;
+
+        const salario = Number(estado.totalSalario) || 0;
+        const despesas = (Number(estado.totalFixo) || 0) + (Number(estado.totalVariavel) || 0);
+        const guardado = Number(estado.totalGuardado) || 0;
+        let mensagem = 'Adicione sua renda e despesas para receber uma leitura automática do mês.';
+        let icone = 'fa-lightbulb';
+
+        if (salario > 0) {
+            const percentualDespesas = Math.round((despesas / salario) * 100);
+            const percentualGuardado = Math.round((guardado / salario) * 100);
+
+            if (estado.sobraTotal < 0) {
+                mensagem = `Atenção: suas saídas já ultrapassaram a renda em R$ ${formatarMoeda(Math.abs(estado.sobraTotal))}.`;
+                icone = 'fa-triangle-exclamation';
+            } else if (percentualGuardado >= 20) {
+                mensagem = `Excelente: você direcionou ${percentualGuardado}% da renda para seus objetivos neste mês.`;
+                icone = 'fa-star';
+            } else if (percentualDespesas >= 80) {
+                mensagem = `Você já comprometeu ${percentualDespesas}% da renda. Vale revisar as próximas despesas.`;
+                icone = 'fa-gauge-high';
+            } else if (despesas === 0 && guardado === 0) {
+                mensagem = 'Sua renda já está registrada. Agora adicione despesas ou defina quanto deseja guardar.';
+                icone = 'fa-route';
+            } else {
+                mensagem = `Seu mês está sob controle: ${percentualDespesas}% da renda foi para despesas até agora.`;
+                icone = 'fa-circle-check';
+            }
+        } else if (guardado > 0) {
+            mensagem = `Você já guardou R$ ${formatarMoeda(guardado)}. Registre sua renda para calcular o saldo real do mês.`;
+            icone = 'fa-piggy-bank';
+        }
+
+        elementos.homeInsight.innerHTML = `<i class="fa-solid ${icone}"></i><span>${escaparHTML(mensagem)}</span>`;
+    }
+
+    function abrirConquista(titulo, mensagem) {
+        if (!elementos.achievementOverlay) return;
+
+        elementos.achievementTitle.textContent = titulo;
+        elementos.achievementMessage.textContent = mensagem;
+        elementos.achievementOverlay.hidden = false;
+        document.body.style.overflow = 'hidden';
+    }
+
+    function fecharConquista() {
+        if (!elementos.achievementOverlay) return;
+        elementos.achievementOverlay.hidden = true;
+        document.body.style.overflow = '';
+    }
+
     function renderizarTela() {
         renderizarCategorias();
         renderizarRecorrencias();
@@ -1470,6 +1645,138 @@ transacoesDaCompetencia.forEach(transacao => {
         elementos.painelFixo.innerText = `R$ ${formatarMoeda(estado.totalFixo)}`;
         elementos.painelVariavel.innerText = `R$ ${formatarMoeda(estado.totalVariavel)}`;
 
+        const possuiLancamentosNoMes =
+            transacoesDaCompetencia.length > 0;
+
+        if (elementos.saldoDisponivelHome) {
+            const saldoHomeExibido = estado.totalSalario <= 0
+                ? 0
+                : Math.abs(estado.sobraTotal);
+
+            elementos.saldoDisponivelHome.textContent =
+                `R$ ${formatarMoeda(saldoHomeExibido)}`;
+
+            elementos.saldoDisponivelHome.classList.remove(
+                'is-positive',
+                'is-negative',
+                'is-neutral'
+            );
+
+            if (estado.totalSalario <= 0) {
+                elementos.saldoDisponivelHome.classList.add('is-neutral');
+                elementos.mensagemSaldoHome.textContent =
+                    'Adicione sua receita para saber quanto pode gastar neste mês.';
+            } else if (estado.sobraTotal < 0) {
+                elementos.saldoDisponivelHome.classList.add('is-negative');
+                elementos.mensagemSaldoHome.textContent =
+                    'Suas despesas ultrapassaram a receita deste mês.';
+            } else {
+                elementos.saldoDisponivelHome.classList.add('is-positive');
+                elementos.mensagemSaldoHome.textContent =
+                    'Este é o valor que ainda pode gastar ou direcionar para seus objetivos.';
+            }
+        }
+
+        atualizarResumoInteligente();
+
+        if (elementos.assistenteFinanceiroGrid && window.DouradoInsights) {
+            const leitura = window.DouradoInsights.gerar({
+                transacoes: transacoesDaCompetencia,
+                competencia: competenciaPainelSelecionada,
+                estado,
+                caixinhas,
+                saldosCaixinhas
+            });
+
+            const cardsAssistente = [];
+
+            if (leitura.maiorCategoria) {
+                cardsAssistente.push({
+                    icone: 'fa-chart-column',
+                    titulo: 'Maior gasto do mês',
+                    valor: leitura.maiorCategoria[0],
+                    texto: `R$ ${formatarMoeda(leitura.maiorCategoria[1])} concentrados nesta categoria.`
+                });
+            }
+
+            if (leitura.projecao > 0) {
+                cardsAssistente.push({
+                    icone: 'fa-calendar-days',
+                    titulo: 'Previsão até o fim do mês',
+                    valor: `R$ ${formatarMoeda(leitura.projecao)}`,
+                    texto: 'Estimativa baseada no ritmo de gastos registrado até agora.'
+                });
+            }
+
+            if (estado.totalSalario > 0) {
+                cardsAssistente.push({
+                    icone: 'fa-seedling',
+                    titulo: 'Taxa guardada',
+                    valor: `${Math.round(leitura.taxaEconomia)}%`,
+                    texto: leitura.taxaEconomia >= 20
+                        ? 'Ótimo ritmo de organização neste mês.'
+                        : 'Guardar um pouco por vez já ajuda a criar consistência.'
+                });
+            }
+
+            if (leitura.proximaMeta) {
+                cardsAssistente.push({
+                    icone: 'fa-bullseye',
+                    titulo: 'Meta mais próxima',
+                    valor: leitura.proximaMeta.nome,
+                    texto: `Faltam R$ ${formatarMoeda(leitura.proximaMeta.falta)} para concluir.`
+                });
+            }
+
+            if (cardsAssistente.length === 0) {
+                cardsAssistente.push({
+                    icone: 'fa-wand-magic-sparkles',
+                    titulo: 'Seu assistente está pronto',
+                    valor: 'Comece pelos lançamentos',
+                    texto: 'Com receita e despesas cadastradas, as dicas aparecem automaticamente.'
+                });
+            }
+
+            elementos.assistenteFinanceiroGrid.innerHTML = cardsAssistente
+                .slice(0, 4)
+                .map(card => `
+                    <article class="assistant-financeiro-card">
+                        <span><i class="fa-solid ${card.icone}"></i></span>
+                        <div>
+                            <small>${escaparHTML(card.titulo)}</small>
+                            <strong>${escaparHTML(card.valor)}</strong>
+                            <p>${escaparHTML(card.texto)}</p>
+                        </div>
+                    </article>
+                `)
+                .join('');
+        }
+
+        if (elementos.homeOnboarding) {
+            elementos.homeOnboarding.hidden = possuiLancamentosNoMes;
+        }
+
+        if (
+            elementos.graficoResumoVazio &&
+            elementos.graficoResumoCanvas
+        ) {
+            const possuiDadosParaAnalise =
+                estado.totalSalario > 0 &&
+                (
+                    estado.totalFixo > 0 ||
+                    estado.totalVariavel > 0 ||
+                    estado.totalGuardado > 0
+                );
+
+            elementos.graficoResumoVazio.hidden =
+                possuiDadosParaAnalise;
+
+            elementos.graficoResumoCanvas.classList.toggle(
+                'is-hidden',
+                !possuiDadosParaAnalise
+            );
+        }
+
   if (elementos.caixinhasGrid) {
     elementos.caixinhasGrid.innerHTML = '';
 
@@ -1513,6 +1820,11 @@ transacoesDaCompetencia.forEach(transacao => {
                 mostrarToast(
                     `Meta da caixinha "${caixinha.nome}" atingida!`,
                     'sucesso'
+                );
+
+                abrirConquista(
+                    'Meta atingida!',
+                    `Parabéns! Você concluiu o objetivo "${caixinha.nome}" e chegou a R$ ${formatarMoeda(saldoCaixinha)}.`
                 );
             }, 0);
         }
@@ -1696,15 +2008,59 @@ transacoesDaCompetencia.forEach(transacao => {
         }
 
         if (elementos.sobraFlutuante) {
-            elementos.sobraFlutuante.innerHTML = estado.sobraTotal < 0
-                ? `🚨 Faltando: <span class="text-red">R$ ${formatarMoeda(Math.abs(estado.sobraTotal))}</span>`
-                : `💰 Sobra Atual: <span class="text-green">R$ ${formatarMoeda(estado.sobraTotal)}</span>`;
+            const semReceita = estado.totalSalario <= 0;
+            const valorExibido = semReceita
+                ? 0
+                : Math.abs(estado.sobraTotal);
 
-            elementos.sobraFlutuante.style.borderColor = estado.sobraTotal < 0 ? '#e74c3c' : '#18bc9c';
+            elementos.sobraFlutuante.classList.remove(
+                'is-positive',
+                'is-negative',
+                'is-neutral'
+            );
+
+            elementos.sobraFlutuante.classList.add(
+                semReceita
+                    ? 'is-neutral'
+                    : estado.sobraTotal < 0
+                        ? 'is-negative'
+                        : 'is-positive'
+            );
+
+            elementos.sobraFlutuante.innerHTML = `
+                <span class="sobra-flutuante-label">
+                    ${semReceita ? 'Registre sua renda' : estado.sobraTotal < 0 ? 'Saldo negativo' : 'Saldo disponível'}
+                </span>
+                <strong>R$ ${formatarMoeda(valorExibido)}</strong>
+            `;
+
+            elementos.sobraFlutuante.style.borderColor = semReceita
+                ? 'rgba(217, 173, 38, 0.38)'
+                : estado.sobraTotal < 0
+                    ? '#e74c3c'
+                    : '#18bc9c';
         }
 
         renderizarHistorico();
     }
+
+if (elementos.btnFecharConquista) {
+    elementos.btnFecharConquista.addEventListener('click', fecharConquista);
+}
+
+if (elementos.achievementOverlay) {
+    elementos.achievementOverlay.addEventListener('click', evento => {
+        if (evento.target === elementos.achievementOverlay) {
+            fecharConquista();
+        }
+    });
+}
+
+document.addEventListener('keydown', evento => {
+    if (evento.key === 'Escape' && elementos.achievementOverlay && !elementos.achievementOverlay.hidden) {
+        fecharConquista();
+    }
+});
 
 // ==========================================
 // SISTEMA DE NOTIFICAÇÕES TOAST
@@ -2457,8 +2813,7 @@ document.addEventListener('keydown', function(evento) {
 });
 
     function abrirModal(tipo, titulo) {
-        tipoLancamento.value = tipo; 
-       tipoLancamento.value = tipo;
+        tipoLancamento.value = tipo;
 document.getElementById('modalTitle').innerText = titulo;
 
 limparFormularioRecorrencia();
@@ -2521,12 +2876,102 @@ btnCancelarLancamento.addEventListener(
     fecharModalLancamento
 );
 
+modalOverlay.addEventListener('click', evento => {
+    if (evento.target === modalOverlay) {
+        fecharModalLancamento();
+    }
+});
+
+document.addEventListener('keydown', evento => {
+    if (
+        evento.key === 'Escape' &&
+        modalOverlay.style.display === 'flex'
+    ) {
+        fecharModalLancamento();
+    }
+
+    if (
+        evento.key === 'Enter' &&
+        modalOverlay.style.display === 'flex' &&
+        evento.target.tagName !== 'TEXTAREA'
+    ) {
+        evento.preventDefault();
+        document.getElementById('btnSalvarLancamento').click();
+    }
+});
+
     document.querySelector('.btn-salary').addEventListener('click', () => abrirModal('salario', 'Inserir Receita'));
     document.querySelector('.btn-saved').addEventListener('click', () => abrirModal('guardado', 'Guardar Dinheiro'));
     document.querySelector('.btn-fixed').addEventListener('click', () => abrirModal('fixo', 'Adicionar Gasto Fixo'));
     document.querySelector('.btn-variable').addEventListener('click', () => abrirModal('variavel', 'Adicionar Gasto Variável'));
     document.querySelector('.btn-rescue').addEventListener('click', () => abrirModal('resgate', 'Resgatar Dinheiro')); 
     document.querySelector('.btn-travel').addEventListener('click', () => abrirModal('resgate', 'Usar Lazer/Casa')); 
+
+    const modalEscolherGasto = document.getElementById('modalEscolherGasto');
+    const btnFecharEscolhaGasto = document.getElementById('btnFecharEscolhaGasto');
+    const btnCancelarEscolhaGasto = document.getElementById('btnCancelarEscolhaGasto');
+
+    function abrirEscolhaGasto() {
+        modalEscolherGasto.style.display = 'flex';
+        modalEscolherGasto.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-aberto');
+
+        const primeiraOpcao = modalEscolherGasto.querySelector('[data-expense-type]');
+        setTimeout(() => primeiraOpcao?.focus(), 60);
+    }
+
+    function fecharEscolhaGasto() {
+        modalEscolherGasto.style.display = 'none';
+        modalEscolherGasto.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-aberto');
+    }
+
+    document.querySelectorAll('[data-home-action]').forEach(botao => {
+        botao.addEventListener('click', () => {
+            const acao = botao.dataset.homeAction;
+
+            if (acao === 'receita') {
+                abrirModal('salario', 'Adicionar Receita');
+                return;
+            }
+
+            if (acao === 'despesa') {
+                abrirEscolhaGasto();
+            }
+        });
+    });
+
+    modalEscolherGasto.querySelectorAll('[data-expense-type]').forEach(opcao => {
+        opcao.addEventListener('click', () => {
+            const tipo = opcao.dataset.expenseType;
+            fecharEscolhaGasto();
+
+            if (tipo === 'fixo') {
+                abrirModal('fixo', 'Adicionar Gasto Fixo');
+                return;
+            }
+
+            abrirModal('variavel', 'Adicionar Gasto Variável');
+        });
+    });
+
+    btnFecharEscolhaGasto.addEventListener('click', fecharEscolhaGasto);
+    btnCancelarEscolhaGasto.addEventListener('click', fecharEscolhaGasto);
+
+    modalEscolherGasto.addEventListener('click', evento => {
+        if (evento.target === modalEscolherGasto) {
+            fecharEscolhaGasto();
+        }
+    });
+
+    document.addEventListener('keydown', evento => {
+        if (
+            evento.key === 'Escape' &&
+            modalEscolherGasto.style.display === 'flex'
+        ) {
+            fecharEscolhaGasto();
+        }
+    });
     
 
     // ==========================================
@@ -2555,6 +3000,7 @@ btnCancelarLancamento.addEventListener(
 document
     .getElementById('btnSalvarLancamento')
     .addEventListener('click', function() {
+        try {
         const tipo = tipoLancamento.value;
 
         const descricao = document
@@ -2640,6 +3086,22 @@ document
             );
 
             return;
+        }
+
+        if (tipo === 'guardado') {
+            const saldoConta = calcularSaldoConta(
+                contaSelecionada.id
+            );
+
+            if (valor > saldoConta) {
+                mostrarToast(
+                    `Saldo insuficiente em ${contaSelecionada.nome}. Disponível: R$ ${formatarMoeda(saldoConta)}. Registre uma receita ou escolha outra conta.`,
+                    'aviso'
+                );
+
+                contaLancamento.focus();
+                return;
+            }
         }
 
         if (tipo === 'resgate') {
@@ -2911,6 +3373,14 @@ document
                     'Lançamento salvo com sucesso.',
             'sucesso'
         );
+    
+        } catch (erro) {
+            console.error('Erro ao salvar lançamento.', erro);
+            mostrarToast(
+                'Não foi possível salvar o lançamento. Revise os campos e tente novamente.',
+                'erro'
+            );
+        }
     });
     // ==========================================
 // 6. PROCESSAMENTO DAS RECORRÊNCIAS MENSAIS

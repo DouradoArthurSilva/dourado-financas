@@ -2,12 +2,20 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="application-version" content="1.0.0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Dourado Finanças — controle financeiro pessoal simples, rápido e visual.">
-    <title>Minhas Finanças - Painel</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23d9ad26'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle' fill='%23172031' font-family='Arial' font-weight='bold'%3E%24%3C/text%3E%3C/svg%3E">
+    <meta name="theme-color" content="#0b1320">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dourado Finanças">
+    <title>Dourado Finanças</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+    <link rel="apple-touch-icon" href="assets/icon.svg">
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -28,7 +36,7 @@
 
         <div class="user-profile">
             <div class="avatar">AD</div>
-            <span>Olá, Arthur Dourado</span>
+            <span id="userGreeting">Olá, Arthur Dourado</span>
         </div>
     </header>
 
@@ -39,7 +47,7 @@
 
     <div class="floating-menu" id="floatingMenu">
 
-        <button class="floating-option btn-salary">
+        <button type="button" class="floating-option btn-salary">
             <span class="option-icon option-blue">
                 <i class="fa-solid fa-money-bill-wave"></i>
             </span>
@@ -50,7 +58,7 @@
             </span>
         </button>
 
-        <button class="floating-option btn-saved">
+        <button type="button" class="floating-option btn-saved">
             <span class="option-icon option-green">
                 <i class="fa-solid fa-piggy-bank"></i>
             </span>
@@ -61,7 +69,7 @@
             </span>
         </button>
 
-        <button class="floating-option btn-fixed">
+        <button type="button" class="floating-option btn-fixed">
             <span class="option-icon option-orange">
                 <i class="fa-solid fa-file-invoice-dollar"></i>
             </span>
@@ -72,7 +80,7 @@
             </span>
         </button>
 
-        <button class="floating-option btn-variable">
+        <button type="button" class="floating-option btn-variable">
             <span class="option-icon option-red">
                 <i class="fa-solid fa-basket-shopping"></i>
             </span>
@@ -83,7 +91,7 @@
             </span>
         </button>
 
-        <button class="floating-option btn-travel">
+        <button type="button" class="floating-option btn-travel">
             <span class="option-icon option-yellow">
                 <i class="fa-solid fa-house"></i>
             </span>
@@ -94,7 +102,7 @@
             </span>
         </button>
 
-        <button class="floating-option btn-rescue">
+        <button type="button" class="floating-option btn-rescue">
             <span class="option-icon option-purple">
                 <i class="fa-solid fa-unlock-keyhole"></i>
             </span>
@@ -122,7 +130,7 @@
 <nav class="app-navigation" id="appNavigation" aria-label="Áreas do sistema">
     <button type="button" class="app-nav-item active" data-app-target="visao-geral">
         <i class="fa-solid fa-house"></i>
-        <span>Visão geral</span>
+        <span>Início</span>
     </button>
     <button type="button" class="app-nav-item" data-app-target="lancamentos">
         <i class="fa-solid fa-receipt"></i>
@@ -147,6 +155,10 @@
     <button type="button" class="app-nav-item" data-app-target="relatorios">
         <i class="fa-solid fa-chart-pie"></i>
         <span>Relatórios</span>
+    </button>
+    <button type="button" class="app-nav-item" data-app-target="dados">
+        <i class="fa-solid fa-database"></i>
+        <span>Segurança</span>
     </button>
 </nav>
 
@@ -187,7 +199,66 @@
         <div class="dashboard-row">
             
             <section class="overview-section app-view-section" data-app-view="visao-geral">
-                <h2 class="section-title">Visão Geral</h2>
+                <div class="home-hero" id="homeHero">
+                    <div class="home-hero-main">
+                        <span class="home-hero-label">Saldo disponível no mês</span>
+                        <strong class="home-hero-value" id="saldoDisponivelHome" aria-live="polite">R$ 0,00</strong>
+                        <p class="home-hero-message" id="mensagemSaldoHome">
+                            Adicione sua receita para começar o planejamento.
+                        </p>
+                    </div>
+
+                    <div class="home-quick-actions" aria-label="Ações rápidas">
+                        <button type="button" class="home-quick-action home-quick-action-primary" data-home-action="receita">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Adicionar receita</span>
+                        </button>
+
+                        <button type="button" class="home-quick-action" data-home-action="despesa">
+                            <i class="fa-solid fa-minus"></i>
+                            <span>Adicionar gasto</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="home-insight" id="homeInsight" aria-live="polite">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <span>Adicione sua renda e despesas para receber uma leitura automática do mês.</span>
+                </div>
+
+                <section class="assistant-financeiro" id="assistenteFinanceiro" aria-labelledby="tituloAssistenteFinanceiro">
+                    <div class="assistant-financeiro-header">
+                        <div>
+                            <span class="section-kicker">Dica do Dourado</span>
+                            <h2 id="tituloAssistenteFinanceiro">Leitura inteligente do seu mês</h2>
+                        </div>
+                        <span class="assistant-financeiro-badge">Atualizado automaticamente</span>
+                    </div>
+                    <div class="assistant-financeiro-grid" id="assistenteFinanceiroGrid"></div>
+                </section>
+
+                <div class="home-onboarding" id="homeOnboarding" hidden>
+                    <span class="home-onboarding-icon">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </span>
+
+                    <div>
+                        <strong>Comece pela sua renda do mês</strong>
+                        <p>Depois, registre as despesas. O Dourado Finanças calcula automaticamente quanto você ainda pode gastar ou guardar.</p>
+                    </div>
+
+                    <button type="button" data-home-action="receita">
+                        Adicionar primeira receita
+                    </button>
+                </div>
+
+                <div class="home-section-heading">
+                    <div>
+                        <h2 class="section-title">Resumo do mês</h2>
+                        <p>Toque em um card para ver os lançamentos relacionados.</p>
+                    </div>
+                </div>
+
                 <div class="cards-grid-compact">
                     <!-- Adicionado clickable-card e data-filter="entradas" -->
                     <div class="card card-blue clickable-card" data-filter="entradas">
@@ -259,8 +330,11 @@
                 </div>
 
                 <div class="cartoes-grid" id="cartoesGrid"></div>
-                <div class="gerenciamento-vazio" id="cartoesVazio" hidden>
-                    Nenhum cartão neste filtro.
+                <div class="gerenciamento-vazio empty-guidance" id="cartoesVazio" hidden>
+                    <i class="fa-solid fa-credit-card"></i>
+                    <strong>Nenhum cartão por aqui</strong>
+                    <span>Cadastre seu primeiro cartão para acompanhar limite, compras e faturas em um só lugar.</span>
+                    <button type="button" data-proxy-click="#btnNovoCartao">Cadastrar primeiro cartão</button>
                 </div>
 
                 <div class="fatura-painel">
@@ -330,8 +404,11 @@
                 </div>
 
                 <div class="contas-grid" id="contasGrid"></div>
-                <div class="gerenciamento-vazio" id="contasVazio" hidden>
-                    Nenhuma conta neste filtro.
+                <div class="gerenciamento-vazio empty-guidance" id="contasVazio" hidden>
+                    <i class="fa-solid fa-building-columns"></i>
+                    <strong>Seu dinheiro ainda não tem uma conta</strong>
+                    <span>Cadastre banco, carteira ou dinheiro em espécie para enxergar onde cada valor está.</span>
+                    <button type="button" data-proxy-click="#btnNovaConta">Cadastrar primeira conta</button>
                 </div>
             </section>
 
@@ -339,6 +416,11 @@
                 <h2 class="section-title" style="margin-bottom: 0;">Análise de Gastos</h2>
                 <div class="chart-container">
                     <canvas id="graficoResumo"></canvas>
+                    <div class="chart-empty-state" id="graficoResumoVazio" hidden>
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <strong>Sua análise aparecerá aqui</strong>
+                        <span>Adicione uma receita e uma despesa para visualizar a distribuição do mês.</span>
+                    </div>
                 </div>
             </section>
 
@@ -382,20 +464,101 @@
                     <div class="ranking-categorias" id="rankingCategorias"></div>
                 </div>
             </section>
-            
+
+            <section class="dados-section app-view-section" data-app-view="dados" hidden>
+                <div class="section-header">
+                    <div>
+                        <span class="section-kicker">Segurança</span>
+                        <h2>Backup e restauração</h2>
+                        <p>Crie uma cópia de segurança para não perder seu histórico ao trocar de dispositivo.</p>
+                    </div>
+                </div>
+
+                <div class="dados-resumo-grid">
+                    <article><i class="fa-solid fa-receipt"></i><span>Lançamentos</span><strong id="backupTotalTransacoes">0</strong></article>
+                    <article><i class="fa-solid fa-piggy-bank"></i><span>Caixinhas</span><strong id="backupTotalCaixinhas">0</strong></article>
+                    <article><i class="fa-solid fa-rotate"></i><span>Recorrências</span><strong id="backupTotalRecorrencias">0</strong></article>
+                    <article><i class="fa-solid fa-tags"></i><span>Categorias</span><strong id="backupTotalCategorias">0</strong></article>
+                    <article><i class="fa-solid fa-building-columns"></i><span>Contas</span><strong id="backupTotalContas">0</strong></article>
+                    <article><i class="fa-solid fa-credit-card"></i><span>Cartões</span><strong id="backupTotalCartoes">0</strong></article>
+                </div>
+
+                <div class="dados-acoes-grid">
+                    <article class="dados-acao-card">
+                        <span class="dados-acao-icone"><i class="fa-solid fa-file-arrow-down"></i></span>
+                        <div>
+                            <h3>Exportar backup</h3>
+                            <p>Baixe uma cópia completa e versionada dos seus dados em formato JSON.</p>
+                        </div>
+                        <button type="button" class="btn-save" id="btnExportarBackup">Baixar backup</button>
+                    </article>
+
+                    <article class="dados-acao-card">
+                        <span class="dados-acao-icone"><i class="fa-solid fa-file-arrow-up"></i></span>
+                        <div>
+                            <h3>Restaurar backup</h3>
+                            <p>Valide e restaure um arquivo criado pelo Dourado Finanças.</p>
+                        </div>
+                        <input type="file" id="arquivoBackup" accept=".json,application/json" hidden>
+                        <button type="button" class="btn-cancel" id="btnSelecionarBackup">Selecionar arquivo</button>
+                    </article>
+
+                    <article class="dados-acao-card">
+                        <span class="dados-acao-icone"><i class="fa-solid fa-mobile-screen-button"></i></span>
+                        <div>
+                            <h3>Instalar aplicativo</h3>
+                            <p id="textoInstalacaoApp">Verificando se o aplicativo pode ser instalado neste dispositivo.</p>
+                        </div>
+                        <button type="button" class="btn-save" id="btnInstalarApp" disabled>Instalar aplicativo</button>
+                    </article>
+                </div>
+
+                <div class="dados-aviso">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <p>Recomendamos baixar um backup sempre que fizer mudanças importantes. Ao restaurar, você verá uma confirmação antes de substituir os dados atuais.</p>
+                </div>
+            </section>
+             
         </div>
       <!-- CAIXINHAS DE OBJETIVOS (NOVO SISTEMA) -->
        <section class="caixinhas-container app-view-section" data-app-view="planejamento" hidden>
+    <div class="planning-guide">
+        <div>
+            <span class="section-kicker">Seu plano financeiro</span>
+            <h2>Transforme intenção em progresso</h2>
+            <p>Use objetivos para guardar dinheiro e recorrências para não cadastrar a mesma conta todos os meses.</p>
+        </div>
+        <button type="button" class="btn-contextual-secondary" data-proxy-click=".btn-fixed">
+            <i class="fa-solid fa-rotate"></i> Criar gasto mensal
+        </button>
+    </div>
     <div class="caixinhas-header">
-        <h2 class="section-title" style="margin-top: 0; border-left-color: #d4af37;">Meus Objetivos (Caixinhas)</h2>
-        <button class="btn-nova-caixinha" id="btnNovaCaixinha">+ Novo Objetivo</button>
+        <div>
+            <h2 class="section-title" style="margin-top: 0; border-left-color: #d4af37;">Objetivos e caixinhas</h2>
+            <p class="section-support-text">Defina uma meta e acompanhe o quanto falta para realizá-la.</p>
+        </div>
+        <button type="button" class="btn-nova-caixinha" id="btnNovaCaixinha">+ Novo objetivo</button>
     </div>
     <div class="caixinhas-grid" id="caixinhasGrid">
         </div>
 </section>
 
 
-        <h2 class="section-title app-view-section" data-app-view="lancamentos" id="tituloHistorico" hidden>Histórico de Lançamentos</h2>
+        <section class="page-intro app-view-section" data-app-view="lancamentos" hidden>
+            <div>
+                <span class="section-kicker">Movimentações</span>
+                <h2 id="tituloHistorico">Tudo que entrou e saiu</h2>
+                <p>Pesquise, filtre e confira cada movimentação. Para começar, escolha o tipo de lançamento.</p>
+            </div>
+            <div class="page-intro-actions">
+                <button type="button" class="btn-contextual-primary" data-proxy-click=".btn-salary">
+                    <i class="fa-solid fa-plus"></i> Nova receita
+                </button>
+                <button type="button" class="btn-contextual-secondary" data-proxy-click=".btn-variable">
+                    <i class="fa-solid fa-minus"></i> Nova despesa
+                </button>
+            </div>
+        </section>
         <section class="categorias-section app-view-section" data-app-view="categorias" hidden>
             <div class="section-header">
                 <div>
@@ -424,8 +587,11 @@
             </div>
 
             <div class="categorias-lista" id="categoriasLista"></div>
-            <div class="gerenciamento-vazio" id="categoriasVazio" hidden>
-                Nenhuma categoria neste filtro.
+            <div class="gerenciamento-vazio empty-guidance" id="categoriasVazio" hidden>
+                <i class="fa-solid fa-tags"></i>
+                <strong>Nenhuma categoria neste filtro</strong>
+                <span>Crie categorias para descobrir com clareza onde você mais gasta.</span>
+                <button type="button" data-proxy-click="#btnNovaCategoria">Criar categoria</button>
             </div>
         </section>
 
@@ -439,9 +605,12 @@
             <h2>Recorrências mensais</h2>
 
             <p>
-                Acompanhe e controle seus lançamentos automáticos.
+                Contas mensais aparecem automaticamente até a data que você escolher.
             </p>
         </div>
+        <button type="button" class="btn-contextual-secondary" data-proxy-click=".btn-fixed">
+            <i class="fa-solid fa-plus"></i> Nova recorrência
+        </button>
     </div>
 
     <div
@@ -491,8 +660,9 @@
         <h3>Nenhuma recorrência cadastrada</h3>
 
         <p>
-            Marque “Repetir todo mês” ao criar uma receita ou gasto.
+            Cadastre uma conta mensal e escolha quando a repetição deve terminar.
         </p>
+        <button type="button" data-proxy-click=".btn-fixed">Criar primeira recorrência</button>
     </div>
 </section>
         <section class="history-section app-view-section" data-app-view="lancamentos" id="historicoLancamentos" hidden>
@@ -544,7 +714,9 @@
             </div>
 
             <div class="history-table-wrapper">
-                <table>
+                <div class="history-timeline" id="timelineHistorico" hidden></div>
+
+                <table class="history-table-legacy" aria-hidden="true">
                     <thead>
                         <tr>
                             <th>Data</th>
@@ -560,7 +732,8 @@
                 <div class="history-empty" id="historicoVazio" hidden>
                     <i class="fa-solid fa-receipt"></i>
                     <h3>Nenhum lançamento encontrado</h3>
-                    <p>Altere os filtros ou adicione um novo lançamento.</p>
+                    <p>Altere os filtros ou registre sua primeira movimentação.</p>
+                    <button type="button" data-proxy-click=".btn-variable">Adicionar lançamento</button>
                 </div>
             </div>
         </section>
@@ -1265,6 +1438,21 @@
     </div>
 </div>
 
+<!-- MODAL DE RESTAURAÇÃO DO BACKUP -->
+<div class="modal-overlay" id="modalRestaurarBackup" aria-hidden="true">
+    <div class="modal-content modal-confirmacao-content" role="dialog" aria-modal="true" aria-labelledby="tituloRestaurarBackup">
+        <span class="confirmacao-icon confirmacao-icon-perigo">
+            <i class="fa-solid fa-rotate-left"></i>
+        </span>
+        <h3 id="tituloRestaurarBackup">Restaurar este backup?</h3>
+        <p id="resumoRestaurarBackup"></p>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="btnCancelarRestauracao">Cancelar</button>
+            <button type="button" class="btn-danger" id="btnConfirmarRestauracao">Restaurar dados</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL DE CONTA -->
 <div class="modal-overlay" id="modalConta" aria-hidden="true">
     <div class="modal-content modal-conta-content" role="dialog" aria-modal="true" aria-labelledby="tituloModalConta">
@@ -1347,6 +1535,67 @@
     </div>
 </div>
 
+<!-- Escolha simples para o usuário decidir qual tipo de gasto quer lançar -->
+<div
+    class="modal-overlay expense-sheet-overlay"
+    id="modalEscolherGasto"
+    aria-hidden="true"
+>
+    <div
+        class="expense-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloEscolherGasto"
+    >
+        <div class="expense-sheet-handle" aria-hidden="true"></div>
+
+        <div class="expense-sheet-header">
+            <div>
+                <span class="expense-sheet-kicker">NOVO GASTO</span>
+                <h3 id="tituloEscolherGasto">Qual tipo de gasto?</h3>
+                <p>Escolha a opção que mais combina com essa despesa.</p>
+            </div>
+
+            <button
+                type="button"
+                class="expense-sheet-close"
+                id="btnFecharEscolhaGasto"
+                aria-label="Fechar"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="expense-sheet-options">
+            <button type="button" class="expense-type-option" data-expense-type="fixo">
+                <span class="expense-type-icon expense-type-icon-fixed">
+                    <i class="fa-solid fa-receipt"></i>
+                </span>
+                <span class="expense-type-copy">
+                    <strong>Gasto fixo</strong>
+                    <small>Contas que costumam se repetir, como aluguel, internet e academia.</small>
+                </span>
+                <i class="fa-solid fa-chevron-right expense-type-arrow"></i>
+            </button>
+
+            <button type="button" class="expense-type-option" data-expense-type="variavel">
+                <span class="expense-type-icon expense-type-icon-variable">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                </span>
+                <span class="expense-type-copy">
+                    <strong>Gasto variável</strong>
+                    <small>Compras e despesas do dia a dia, como mercado, lazer e combustível.</small>
+                </span>
+                <i class="fa-solid fa-chevron-right expense-type-arrow"></i>
+            </button>
+        </div>
+
+        <button type="button" class="expense-sheet-cancel" id="btnCancelarEscolhaGasto">
+            Cancelar
+        </button>
+    </div>
+</div>
+
  <div
     class="modal-overlay"
     id="modalLancamento"
@@ -1354,17 +1603,20 @@
 >
     <div class="modal-content">
         <h3 id="modalTitle">Adicionar Nova Movimentação</h3>
-        
-        <input type="hidden" id="tipoLancamento" value="">
+
+        <div class="modal-lancamento-scroll">
+            <input type="hidden" id="tipoLancamento" value="">
+               
+
 
         <div class="form-group">
             <label for="descricao">Descrição</label>
-            <input type="text" id="descricao" placeholder="Ex: Aluguel, Salário, Compra...">
+            <input type="text" id="descricao" maxlength="80" autocomplete="off" placeholder="Ex: Aluguel, Salário, Compra...">
         </div>
 
         <div class="form-group">
             <label for="valor">Valor (R$)</label>
-            <input type="number" id="valor" placeholder="0,00">
+            <input type="number" id="valor" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00">
         </div>
 
         <div
@@ -1406,11 +1658,11 @@
                 type="checkbox"
                 id="isRecorrente"
             >
-            Parcelado?
+            Repetir todo mês?
         </span>
 
         <small>
-            O sistema criará os próximos lançamentos automaticamente.
+            Ideal para salário, aluguel, assinaturas e contas mensais.
         </small>
     </label>
 
@@ -1510,8 +1762,10 @@
             >
         </div>
     </div>
-</div>
-        
+
+        </div>
+
+        </div>
 
         <div class="modal-actions">
             <button
@@ -1528,20 +1782,45 @@
 >
     Salvar
 </button>
-        </div>
+        
     </div>
 </div>
+</div>
 
-                
-    <div class="sobra-flutuante">
+    <div
+        class="achievement-overlay"
+        id="achievementOverlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="achievementTitle"
+        aria-describedby="achievementMessage"
+        hidden
+    >
+        <div class="achievement-card confetti">
+            <div class="achievement-icon">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <p class="achievement-kicker">CONQUISTA DESBLOQUEADA</p>
+            <h2 id="achievementTitle">Meta atingida!</h2>
+            <p id="achievementMessage">Você concluiu um objetivo financeiro.</p>
+            <button type="button" id="btnFecharConquista">Continuar</button>
+        </div>
+    </div>
+
+    <div class="sobra-flutuante" aria-live="polite">
         💰 Sobra Atual: <span id="valorSobraFlutuante" class="text-green">R$ 0,00</span>
     </div>
 <script src="js/utils.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/state.js"></script>
+<script src="js/financeiro.js"></script>
+<script src="js/recorrencias.js"></script>
+<script src="js/historico.js"></script>
 <script src="js/script.js"></script>
 <script src="js/accounts.js"></script>
 <script src="js/cards.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/pwa.js"></script>
 <script src="js/navigation.js"></script>
 </body>
 </html>

@@ -1,3 +1,7 @@
+// Controle dos cartões e das faturas.
+// Essa foi uma das partes mais trabalhosas porque fechamento, vencimento e
+// parcelamento precisam cair no mês certo.
+
 let filtroCartoesAtual = 'ativos';
 
 function obterCartaoPorId(id) {
@@ -18,6 +22,7 @@ function somarMesesCompetencia(competencia, meses) {
     return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// Descobre em qual fatura a compra entra, considerando o dia de fechamento.
 function obterCompetenciaInicialCompra(cartao, dataCompra) {
     const [ano, mes, dia] = dataCompra.split('-').map(Number);
     const competenciaCompra =
@@ -68,6 +73,7 @@ function calcularTotalFatura(cartaoId, competencia) {
         0);
 }
 
+// Somo apenas compras de faturas que ainda não foram pagas.
 function calcularLimiteUtilizado(cartaoId) {
     return transacoes
         .filter(transacao =>
@@ -102,6 +108,7 @@ function formatarDataCurta(data) {
     });
 }
 
+// Centralizei o status para não repetir regra de aberta, fechada ou vencida.
 function obterStatusFatura(cartao, competencia, total, pagamento) {
     if (pagamento) {
         return {

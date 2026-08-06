@@ -1,0 +1,31 @@
+{
+    "id": "./",
+    "name": "Dourado Finanças",
+    "short_name": "Dourado",
+    "description": "Organização financeira pessoal, contas, cartões, metas e planejamento.",
+    "lang": "pt-BR",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#0b1320",
+    "theme_color": "#0b1320",
+    "categories": [
+        "finance",
+        "productivity"
+    ],
+    "icons": [
+        {
+            "src": "assets/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "assets/icon-maskable.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "maskable"
+        }
+    ]
+}
