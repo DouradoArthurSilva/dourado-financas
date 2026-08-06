@@ -1,12 +1,22 @@
 # Dourado Finanças
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/50958d17-2e4d-4fd0-8155-a74213aa9886" alt="Dourado Finanças">
+  <img src="https://github.com/user-attachments/assets/50958d17-2e4d-4fd0-8155-a74213aa9886" width="900" alt="Dourado Finanças">
 </p>
 
 Sistema web de organização financeira pessoal desenvolvido em HTML, CSS e JavaScript puro.
 
 Projeto criado com foco em aprendizado de desenvolvimento web, organização de código e experiência do usuário.
+
+Tecnologias utilizadas:
+
+- HTML5
+- CSS3
+- JavaScript
+- LocalStorage
+- Chart.js
+- PWA
+- Service Worker
 
 A ideia do projeto é permitir que o usuário controle receitas, despesas, contas, cartões, metas financeiras e acompanhe sua situação financeira de forma simples e organizada.
 
@@ -97,6 +107,7 @@ Este projeto foi desenvolvido para colocar em prática conceitos de desenvolvime
 
 Durante o desenvolvimento procurei organizar o código em arquivos separados, evitar duplicação de funções e manter uma interface simples para qualquer pessoa conseguir utilizar.
 
+O sistema também pode ser instalado como aplicativo no Android e iPhone utilizando os recu
 ## Autor
 
 Arthur Dourado
